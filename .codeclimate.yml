@@ -12,4 +12,4 @@ ratings:
   paths:
   - "lib/**"
 exclude_paths:
-- "docs/**"
+  - "docs/**"
