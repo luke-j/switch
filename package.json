@@ -1,8 +1,13 @@
 {
 	"name": "Switch",
 	"version": "1.0.0",
-	"description": "",
+	"author": "Luke Jones (https://github.com/luke-j)",
+	"description": "Write apache and nginx conf in JSON and switch between the two seamlessly",
 	"main": "gulpfile.babel.js",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/luke-j/switch"
+	},
 	"scripts": {
 		"lint": "gulp lint",
 		"test": "npm run lint && gulp test",
@@ -11,7 +16,7 @@
 		"watch": "gulp watch",
 		"build": "gulp"
 	},
-	"author": "Luke-j",
+	"bugs": "https://github.com/luke-j/switch/issues/",
 	"license": "Apache-2.0",
 	"devDependencies": {
 		"babel-eslint": "^5.0.0",
