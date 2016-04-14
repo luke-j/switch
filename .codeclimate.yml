@@ -4,12 +4,10 @@ engines:
   csslint:
     enabled: false
   duplication:
-    enabled: true
-    config:
-      languages:
-      - javascript
+    enabled: false
 ratings:
   paths:
   - "lib/**"
 exclude_paths:
   - "docs/**"
+  - "dist/**"
