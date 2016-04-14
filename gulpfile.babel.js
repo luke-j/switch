@@ -14,8 +14,8 @@ import insert from 'gulp-insert';
 
 const paths = {
 	lib: {
-		main: 'lib/Switch.js',
-		files: 'lib/**/*.js'
+		main: 'src/Switch.js',
+		files: 'src/**/*.js'
 	},
 	compilation: {
 		main: 'build.js',

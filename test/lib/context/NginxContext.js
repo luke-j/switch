@@ -1,4 +1,4 @@
-import NginxContext from '../../../lib/context/NginxContext';
+import NginxContext from '../../../src/context/NginxContext';
 
 describe('Apache Context', () => {
 	let context;

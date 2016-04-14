@@ -1,4 +1,4 @@
-import ApacheContext from '../../../lib/context/ApacheContext';
+import ApacheContext from '../../../src/context/ApacheContext';
 
 describe('ApacheContext', () => {
 	let context;

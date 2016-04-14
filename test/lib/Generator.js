@@ -1,4 +1,4 @@
-import Generator from '../../lib/Generator';
+import Generator from '../../src/Generator';
 
 describe('Generator', () => {
 	let config, context, compiler, syntax, handlebars, template, generator;

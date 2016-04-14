@@ -1,4 +1,4 @@
-import To from '../../../lib/commands/To';
+import To from '../../../src/commands/To';
 
 describe('To Command', () => {
 	let to;

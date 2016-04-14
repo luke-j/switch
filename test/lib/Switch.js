@@ -1,4 +1,4 @@
-import Switch from '../../lib/Switch';
+import Switch from '../../src/Switch';
 
 describe('Switch', () => {
 	it('should expose the "main" method', () => {

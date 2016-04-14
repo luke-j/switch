@@ -1,4 +1,4 @@
-import ApacheCompiler from '../../../lib/compiler/ApacheCompiler';
+import ApacheCompiler from '../../../src/compiler/ApacheCompiler';
 
 describe('ApacheCompiler', () => {
 	let context, compiler, expressions;

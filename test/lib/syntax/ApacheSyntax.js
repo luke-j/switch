@@ -1,5 +1,5 @@
-import Config from '../../../lib/Config';
-import ApacheSyntax from '../../../lib/syntax/ApacheSyntax';
+import Config from '../../../src/Config';
+import ApacheSyntax from '../../../src/syntax/ApacheSyntax';
 
 describe('ApacheSyntax', () => {
 	let config, syntax, conf;

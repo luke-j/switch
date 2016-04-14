@@ -1,4 +1,4 @@
-import NginxCompiler from '../../../lib/compiler/NginxCompiler';
+import NginxCompiler from '../../../src/compiler/NginxCompiler';
 
 describe('Nginx Compiler', () => {
 	let context, compiler, expressions;

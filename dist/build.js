@@ -1,3363 +1,4 @@
 var scriptArgs = scriptArgs || arguments || [];(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @license
- *
- * Copyright 2016- Luke Jones (https://github.com/luke-j)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-var Config = function () {
-
-	/**
-  * Merges the options given with default options, and adds anything needed into the config object
-  *
-  * @constructor Config
-  * @param {String} type - The "use" parameter, ie. nginx, apache
-  * @param {String} server - The server name, given as the first object key in the config file
-  * @param {Object} config - The config options under the server name
-  * @property {Object} options - The processed config options
-  * @property {Object} locations - The processed config options under each location specified
-  * @property {String} type - The server type, ie. nginx
-  */
-
-	function Config(type, server, config) {
-		_classCallCheck(this, Config);
-
-		this._defaults = {
-			name: server,
-			ssl: {
-				enable: false,
-				cert: null,
-				key: null
-			},
-			port: 80,
-			aliases: [],
-			accessLog: null,
-			errorLog: null,
-			root: null,
-			index: [],
-			fastcgi: false,
-			serverSignature: true,
-			listDirectories: false,
-			compress: {
-				enable: false,
-				types: ['text/plain']
-			},
-			caching: {
-				enable: false,
-				types: ['html'],
-				expires: {
-					years: 0,
-					months: 0,
-					weeks: 0,
-					days: 0,
-					minutes: 0
-				}
-			},
-			auth: {
-				enable: false,
-				message: 'Restricted',
-				userFile: null
-			},
-			headers: {
-				set: null,
-				unset: []
-			},
-			proxy: {
-				enable: false,
-				to: null
-			},
-			redirect: {
-				enable: false,
-				permanent: true,
-				to: null
-			}
-		};
-		this._config = config;
-		this.type = type;
-		this.options = this._deepAssign(this._defaults, this._config, {});
-		this.locations = this._parseLocations(this.options);
-	}
-
-	/**
-  * Recursively merge two objects, with the source object taking precedence over the target object
-  *
-  * @param {Object} target - Object to merge with "source"
-  * @param {Object} source - The object to merge with "target", taking precedence over the "target" object
-  * @returns {Object}
-  * @private
-  */
-
-
-	_createClass(Config, [{
-		key: '_deepAssign',
-		value: function _deepAssign(target, source) {
-			var deeplyAssigned = {};
-			for (var option in target) {
-				if (target.hasOwnProperty(option)) {
-					if (source.hasOwnProperty(option)) {
-						if (target[option] !== null && _typeof(target[option]) === 'object' && target[option].constructor !== Array) {
-							deeplyAssigned[option] = this._deepAssign(target[option], source[option]);
-						} else {
-							deeplyAssigned[option] = source[option];
-						}
-					} else {
-						deeplyAssigned[option] = target[option];
-					}
-				}
-			}
-
-			// assign any properties present in source but absent in target
-			for (var _option in source) {
-				if (source.hasOwnProperty(_option)) {
-					if (!deeplyAssigned.hasOwnProperty(_option)) {
-						deeplyAssigned[_option] = source[_option];
-					}
-				}
-			}
-
-			return deeplyAssigned;
-		}
-
-		/**
-   * Parse the config object, making new objects of any property that starts with a slash and is an object - indicating a location
-   *
-   * @param {Object} config
-   * @returns {Object}
-   * @private
-   */
-
-	}, {
-		key: '_parseLocations',
-		value: function _parseLocations(config) {
-			var locations = {};
-			for (var option in config) {
-				if (config.hasOwnProperty(option)) {
-					// locations must be objects
-					if (config[option] !== null && _typeof(config[option]) === 'object' && config[option].constructor !== Array) {
-						var match = option.match(/^\//g);
-						if (match) {
-							locations[option] = {
-								options: config[option]
-							};
-							delete this.options[option];
-						}
-					}
-				}
-			}
-
-			return locations;
-		}
-	}]);
-
-	return Config;
-}();
-
-exports.default = Config;
-
-},{}],2:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
-
-var _SpiderMonkey = require(3);
-
-var _SpiderMonkey2 = _interopRequireDefault(_SpiderMonkey);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Generator = function () {
-
-	/**
-  * Builds a conf string to be placed into an nginx.conf or apache.conf file
-  *
-  * @param {Config} Config - A config instance
-  * @param {ApacheContext|NginxContext} Context - An uninitialised Context instance
-  * @param {ApacheCompiler|NginxCompiler} Compiler - An uninitialised Compiler instance
-  * @param {ApacheSyntax|NginxSyntax} Syntax - An uninitialised Syntax instance
-  * @param {Handlebars} Handlebars - An instance of Handlebars
-  * @param {String} template - A pre-compiled handlebars template
-  */
-
-	function Generator(Config, Context, Compiler, Syntax, Handlebars, template) {
-		_classCallCheck(this, Generator);
-
-		this._Config = Config;
-		this._Context = Context;
-		this._Compiler = Compiler;
-		this._Syntax = Syntax;
-		this._Handlebars = Handlebars;
-		this._template = template;
-
-		this._mainContext = new this._Context(this._Config.type === 'apache' && '*:' + this._Config.options.port);
-		this._mainContext.Config = this._Config;
-		this._mainContext.Syntax = new this._Syntax(this._mainContext);
-		this._mainContext.Compiler = new this._Compiler(this._mainContext);
-	}
-
-	/**
-  * Compile the necessary syntax and location contexts
-  *
-  * @returns {Generator}
-  */
-
-
-	_createClass(Generator, [{
-		key: 'build',
-		value: function build() {
-			this._compileMainBlock();
-
-			for (var location in this._mainContext.Config.locations) {
-				if (this._mainContext.Config.locations.hasOwnProperty(location)) {
-					this._compileLocationBlock(location, this._mainContext.Config.locations[location]);
-				}
-			}
-
-			return this;
-		}
-
-		/**
-   * Output the compiled string, ready to be placed into a .conf file
-   *
-   * @returns {String}
-   */
-
-	}, {
-		key: 'output',
-		value: function output() {
-			if (this._template) {
-				var template = this._Handlebars.compile(this._template, { noEscape: true });
-
-				return template({
-					context: this._mainContext
-				});
-			}
-
-			return '';
-		}
-
-		/**
-   * Compile the main context of the .conf file, either the server or VirtualHost block
-   *
-   * @private
-   */
-
-	}, {
-		key: '_compileMainBlock',
-		value: function _compileMainBlock() {
-			this._compileContext(this._mainContext);
-		}
-
-		/**
-   * Compile a child context, ie. location, Directory, Proxy, etc.
-   *
-   * @param {String} path - The path (or directive) of the specified location
-   * @param {Object} config - The config options under this location
-   * @private
-   */
-
-	}, {
-		key: '_compileLocationBlock',
-		value: function _compileLocationBlock(path, config) {
-			var locationContext = new this._Context(path);
-			locationContext.Config = config;
-			locationContext.Syntax = new this._Syntax(locationContext);
-			locationContext.Compiler = new this._Compiler(locationContext);
-
-			this._compileContext(locationContext);
-			this._mainContext.contexts.push(locationContext);
-		}
-
-		/**
-   * Compile a specified context, iterating over the necessary expressions and compiling each one
-   *
-   * @param {Context} context - The context to compile
-   * @private
-   */
-
-	}, {
-		key: '_compileContext',
-		value: function _compileContext(context) {
-			for (var option in context.Config.options) {
-				if (context.Config.options.hasOwnProperty(option)) {
-					if (typeof context.Syntax[option] !== 'function') {
-						_SpiderMonkey2.default.print('Invalid option "' + option + '"');
-						_SpiderMonkey2.default.quit(1);
-					}
-
-					context.Compiler.compile(context.Syntax[option]().expressions);
-				}
-			}
-		}
-	}]);
-
-	return Generator;
-}();
-
-exports.default = Generator;
-
-},{"3":3}],3:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @license
- *
- * Copyright 2016- Luke Jones (https://github.com/luke-j)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/**
- * Provides a facade over the SpiderMonkey global functions/arrays.
- * If these methods are called outside of the SpiderMonkey shell, they will fail gracefully
- *
- * @namespace SpiderMonkey
- */
-
-var SpiderMonkey = function () {
-	function SpiderMonkey() {
-		_classCallCheck(this, SpiderMonkey);
-	}
-
-	_createClass(SpiderMonkey, null, [{
-		key: 'environment',
-
-
-		/**
-   * Used to access an array of environment variables
-   *
-   * @memberof SpiderMonkey
-   * @static
-   * @returns {Array}
-   */
-		value: function (_environment) {
-			function environment() {
-				return _environment.apply(this, arguments);
-			}
-
-			environment.toString = function () {
-				return _environment.toString();
-			};
-
-			return environment;
-		}(function () {
-			return typeof environment !== 'undefined' ? environment : [];
-		})
-
-		/**
-   * Used to access the arguments passed to the JS shell
-   *
-   * @static
-   * @returns {Array}
-   */
-
-	}, {
-		key: 'scriptArgs',
-		value: function (_scriptArgs) {
-			function scriptArgs() {
-				return _scriptArgs.apply(this, arguments);
-			}
-
-			scriptArgs.toString = function () {
-				return _scriptArgs.toString();
-			};
-
-			return scriptArgs;
-		}(function () {
-			return typeof scriptArgs !== 'undefined' ? scriptArgs : [];
-		})
-
-		/**
-   * Print a message to the console
-   *
-   * @static
-   * @param {String} [message=''] - The message to be printed to the console
-   */
-
-	}, {
-		key: 'print',
-		value: function (_print) {
-			function print() {
-				return _print.apply(this, arguments);
-			}
-
-			print.toString = function () {
-				return _print.toString();
-			};
-
-			return print;
-		}(function () {
-			var message = arguments.length <= 0 || arguments[0] === undefined ? '' : arguments[0];
-
-			typeof print === 'function' && print(message);
-		})
-
-		/**
-   * Read a file and return it's contents
-   *
-   * @static
-   * @param {String} [message=null] - A file path
-   * @returns {Boolean|String} The file contents, or false if unsuccessful
-   */
-
-	}, {
-		key: 'read',
-		value: function (_read) {
-			function read() {
-				return _read.apply(this, arguments);
-			}
-
-			read.toString = function () {
-				return _read.toString();
-			};
-
-			return read;
-		}(function () {
-			var file = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
-
-			return typeof read === 'function' && read(file);
-		})
-
-		/**
-   * Exit the JS shell process
-   *
-   * @static
-   * @param {Integer} [exit=0] - The exit code, non-zero indicating errors
-   */
-
-	}, {
-		key: 'quit',
-		value: function (_quit) {
-			function quit() {
-				return _quit.apply(this, arguments);
-			}
-
-			quit.toString = function () {
-				return _quit.toString();
-			};
-
-			return quit;
-		}(function () {
-			var exit = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
-
-			typeof quit === 'function' && quit(exit);
-
-			if (exit > 0) {
-				throw new Error();
-			}
-		})
-	}]);
-
-	return SpiderMonkey;
-}();
-
-exports.default = SpiderMonkey;
-
-},{}],4:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
-
-var _To = require(5);
-
-var _To2 = _interopRequireDefault(_To);
-
-var _SpiderMonkey = require(3);
-
-var _SpiderMonkey2 = _interopRequireDefault(_SpiderMonkey);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Switch = function () {
-
-	/**
-  * Parse the CLI arguments and run the Switch process
-  *
-  * @constructor Switch
-  */
-
-	function Switch() {
-		_classCallCheck(this, Switch);
-	}
-
-	/**
-  * Parse the CLI arguments and run the command specified by the --command parameter
-  *
-  * @param {Array} scriptArgs - The CLI passed to the JS shell
-  */
-
-
-	_createClass(Switch, null, [{
-		key: 'main',
-		value: function main() {
-			var scriptArgs = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
-
-			var args = {};
-			for (var x = 0, length = scriptArgs.length; x < length; x += 2) {
-				args[scriptArgs[x].replace(/^\-{2}/, '')] = scriptArgs[x + 1];
-			}
-
-			if (!args.command) {
-				_SpiderMonkey2.default.print('You must specify a "--command" option');
-				_SpiderMonkey2.default.quit(1);
-			}
-
-			switch (args.command) {
-				case 'to':
-					if (!args.to) {
-						_SpiderMonkey2.default.print('You must specify a "--to" option');
-						_SpiderMonkey2.default.quit(1);
-					} else if (!args.config) {
-						_SpiderMonkey2.default.print('You must specify a "--config" option');
-						_SpiderMonkey2.default.quit(1);
-					}
-					// SWITCH_SOURCE refers to the Switch source directory
-					var run = new _To2.default(args.to, _SpiderMonkey2.default.read(args.config), _SpiderMonkey2.default.environment()['SWITCH_SOURCE']).generate();
-					_SpiderMonkey2.default.print(run);
-					_SpiderMonkey2.default.quit();
-					break;
-				default:
-					_SpiderMonkey2.default.print('Invalid command');
-					_SpiderMonkey2.default.quit(1);
-					break;
-			}
-		}
-	}]);
-
-	return Switch;
-}();
-
-// only execute main() if in the SpiderMonkey environment, version is a SpiderMonkey global function
-
-
-exports.default = Switch;
-typeof version === 'function' && Switch.main(_SpiderMonkey2.default.scriptArgs());
-
-},{"3":3,"5":5}],5:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
-
-var _SpiderMonkey = require(3);
-
-var _SpiderMonkey2 = _interopRequireDefault(_SpiderMonkey);
-
-var _Generator = require(2);
-
-var _Generator2 = _interopRequireDefault(_Generator);
-
-var _Config = require(1);
-
-var _Config2 = _interopRequireDefault(_Config);
-
-var _handlebars = require(48);
-
-var _handlebars2 = _interopRequireDefault(_handlebars);
-
-var _NginxContext = require(13);
-
-var _NginxContext2 = _interopRequireDefault(_NginxContext);
-
-var _NginxCompiler = require(9);
-
-var _NginxCompiler2 = _interopRequireDefault(_NginxCompiler);
-
-var _NginxSyntax = require(15);
-
-var _NginxSyntax2 = _interopRequireDefault(_NginxSyntax);
-
-var _ApacheContext = require(11);
-
-var _ApacheContext2 = _interopRequireDefault(_ApacheContext);
-
-var _ApacheCompiler = require(7);
-
-var _ApacheCompiler2 = _interopRequireDefault(_ApacheCompiler);
-
-var _ApacheSyntax = require(14);
-
-var _ApacheSyntax2 = _interopRequireDefault(_ApacheSyntax);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var To = function () {
-
-	/**
-  * Handles actions required to perform the "to" command
-  *
-  * @constructor
-  * @param {String} use - The server software to use, ie. nginx
-  * @param {String} config - A JSON string read from the config file
-  * @param {String} source - The Switch source directory
-  */
-
-	function To(use, config, source) {
-		_classCallCheck(this, To);
-
-		this._use = use.toLowerCase();
-		this._config = config && JSON.parse(config);
-		this._source = source;
-		this._output = '';
-	}
-
-	/**
-  * Iterates over server names and delegates their config options to be built into apache or nginx conf strings
-  *
-  * @returns {String}
-  */
-
-
-	_createClass(To, [{
-		key: 'generate',
-		value: function generate() {
-			var header = '# Automatically generated by Switch - ' + new Date().toUTCString() + '\n\n';
-
-			for (var server in this._config) {
-				if (this._config.hasOwnProperty(server)) {
-					this._buildConf(server);
-				}
-			}
-
-			return header + this._output;
-		}
-
-		/**
-   * Builds a config instance and passes the necessary dependencies to the Generator instance to be parsed and compiled into conf
-   *
-   * @param {String} server
-   * @private
-   */
-
-	}, {
-		key: '_buildConf',
-		value: function _buildConf(server) {
-			var config = new _Config2.default(this._use, server, this._config[server]);
-			var builder = void 0;
-
-			switch (this._use) {
-				case 'nginx':
-					builder = new _Generator2.default(config, _NginxContext2.default, _NginxCompiler2.default, _NginxSyntax2.default, _handlebars2.default, _SpiderMonkey2.default.read(this._source + 'lib/templates/nginx.hbs')).build();
-					break;
-				case 'apache':
-					builder = new _Generator2.default(config, _ApacheContext2.default, _ApacheCompiler2.default, _ApacheSyntax2.default, _handlebars2.default, _SpiderMonkey2.default.read(this._source + 'lib/templates/apache.hbs')).build();
-					break;
-				default:
-					throw new Error('Invalid "use" parameter ' + this._use);
-			}
-
-			this._output += builder.output();
-		}
-	}]);
-
-	return To;
-}();
-
-exports.default = To;
-
-},{"1":1,"11":11,"13":13,"14":14,"15":15,"2":2,"3":3,"48":48,"7":7,"9":9}],6:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _CompilerInterface2 = require(8);
-
-var _CompilerInterface3 = _interopRequireDefault(_CompilerInterface2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var AbstractCompiler = function (_CompilerInterface) {
-	_inherits(AbstractCompiler, _CompilerInterface);
-
-	/**
-  * The Compiler is responsible for turning syntax expressions into apache or nginx conf
-  *
-  * @implements CompilerInterface
-  * @param {ApacheContext|NginxContext} Context - A Apache/Nginx Context instance
-  */
-
-	function AbstractCompiler(Context) {
-		_classCallCheck(this, AbstractCompiler);
-
-		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AbstractCompiler).call(this));
-
-		_this._Context = Context;
-		return _this;
-	}
-
-	/**
-  * @inheritdoc
-  */
-
-
-	_createClass(AbstractCompiler, [{
-		key: 'compile',
-		value: function compile(expressions) {
-			expressions.forEach(this._compileEach.bind(this));
-		}
-
-		/**
-   * Compile an assignment expression, ie. an expression assigning a value to an identifier
-   *
-   * @param {Object} expression - A syntax expression
-   * @protected
-   */
-
-	}, {
-		key: '_assignmentExpression',
-		value: function _assignmentExpression(expression) {
-			if (!expression.hasOwnProperty('left') || !expression.hasOwnProperty('right')) {
-				throw new Error('Assignment expression must have a left and right-side value');
-			}
-
-			this._expression(expression.left);
-			this._expression(expression.right);
-		}
-
-		/**
-   * Compile an identifier, ie. a known word to apache or nginx, like DocumentRoot or server_name
-   *
-   * @param {Object} expression - A syntax expression
-   * @protected
-   */
-
-	}, {
-		key: '_identifier',
-		value: function _identifier(expression) {
-			if (!expression.hasOwnProperty('value')) {
-				throw new Error('Identifier must have a value');
-			}
-
-			this._line += expression.value + ' ';
-
-			expression.right && this._expression(expression.right);
-		}
-
-		/**
-   * Compile a literal, which can be any string
-   *
-   * @param {Object} expression - A syntax expression
-   * @protected
-   */
-
-	}, {
-		key: '_literal',
-		value: function _literal(expression) {
-			if (!expression.hasOwnProperty('value')) {
-				throw new Error('Literal must have a value');
-			}
-
-			this._line += expression.value + ' ';
-
-			expression.right && this._expression(expression.right);
-		}
-
-		/**
-   * Compile a variable, which is a pre-determined apache variable which holds a computed value
-   *
-   * @param {Object} expression - A syntax expression
-   * @protected
-   */
-
-	}, {
-		key: '_variable',
-		value: function _variable(expression) {
-			if (!expression.hasOwnProperty('value')) {
-				throw new Error('Literal must have a value');
-			}
-
-			this._line += expression.value + ' ';
-
-			expression.right && this._expression(expression.right);
-		}
-
-		/**
-   * Transforms expressions into apache/nginx conf
-   *
-   * @param {Object} expression - A syntax expression to be parsed
-   * @private
-   */
-
-	}, {
-		key: '_compileEach',
-		value: function _compileEach(expression) {
-			this._line = '';
-			this._expression(expression);
-			if (this._line) {
-				this._Context.lines.push(this._line.trim());
-			}
-		}
-	}]);
-
-	return AbstractCompiler;
-}(_CompilerInterface3.default);
-
-exports.default = AbstractCompiler;
-
-},{"8":8}],7:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _AbstractCompiler2 = require(6);
-
-var _AbstractCompiler3 = _interopRequireDefault(_AbstractCompiler2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var ApacheCompiler = function (_AbstractCompiler) {
-	_inherits(ApacheCompiler, _AbstractCompiler);
-
-	/**
-  * Compilations required specifically for apache conf
-  *
-  * @implements CompilerInterface
-  * @extends AbstractCompiler
-  * @param {ApacheContext|NginxContext} Context - An Apache/Nginx Context object
-  */
-
-	function ApacheCompiler(Context) {
-		_classCallCheck(this, ApacheCompiler);
-
-		return _possibleConstructorReturn(this, Object.getPrototypeOf(ApacheCompiler).call(this, Context));
-	}
-
-	/**
-  * Parse and compile a single syntax expression into apache conf
-  *
-  * @abstract
-  * @protected
-  * @param {Object} expression - A single syntax expression to compile
-  * @returns {string}
-  */
-
-
-	_createClass(ApacheCompiler, [{
-		key: '_expression',
-		value: function _expression(expression) {
-			if (!expression.hasOwnProperty('type')) {
-				throw new Error('Expression must have a type');
-			}
-
-			switch (expression.type) {
-				case 'AssignmentExpression':
-					this._assignmentExpression(expression);
-					break;
-				case 'Identifier':
-					this._identifier(expression);
-					break;
-				case 'Literal':
-					this._literal(expression);
-					break;
-				case 'LocationBlock':
-					this._generateBlockStatement(expression);
-					break;
-				case 'LocationMatchBlock':
-					this._generateBlockStatement(expression, 'LocationMatch');
-					break;
-				case 'ProxyBlock':
-					this._generateBlockStatement(expression, 'Proxy');
-					break;
-				case 'DirectoryBlock':
-					this._generateBlockStatement(expression, 'Directory');
-					break;
-				case 'Variable':
-					this._variable(expression);
-					break;
-				default:
-					break;
-			}
-
-			return this._line;
-		}
-
-		/**
-   * Compile a Block Statement, like a Location block
-   *
-   * @param {Object} expression - A syntax expression
-   * @param {String} type - The type of context being created, ie. Location, Directory, etc.
-   * @protected
-   */
-
-	}, {
-		key: '_generateBlockStatement',
-		value: function _generateBlockStatement(expression, type) {
-			if (!expression.hasOwnProperty('directive') || !expression.hasOwnProperty('body')) {
-				throw new Error('Directory block requires a directive and a body');
-			}
-
-			var childContext = this._Context.addContext(expression.directive, type),
-			    compiler = new ApacheCompiler(childContext);
-
-			compiler.compile(expression.body.expressions);
-		}
-	}]);
-
-	return ApacheCompiler;
-}(_AbstractCompiler3.default);
-
-exports.default = ApacheCompiler;
-
-},{"6":6}],8:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @license
- *
- * Copyright 2016- Luke Jones (https://github.com/luke-j)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-var CompilerInterface = function () {
-
-  /**
-   * Each compiler for each server must implement this interface
-   *
-   * @interface
-   */
-
-  function CompilerInterface() {
-    _classCallCheck(this, CompilerInterface);
-  }
-
-  /**
-   * Transforms expressions into apache/nginx conf
-   *
-   * @abstract
-   * @param {Array} expressions - An array of syntax expressions
-   */
-
-
-  _createClass(CompilerInterface, [{
-    key: "compile",
-    value: function compile(expressions) {// eslint-disable-line no-unused-vars
-    }
-  }]);
-
-  return CompilerInterface;
-}();
-
-exports.default = CompilerInterface;
-
-},{}],9:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _AbstractCompiler2 = require(6);
-
-var _AbstractCompiler3 = _interopRequireDefault(_AbstractCompiler2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var NginxCompiler = function (_AbstractCompiler) {
-	_inherits(NginxCompiler, _AbstractCompiler);
-
-	/**
-  * Compilations required specifically for nginx conf
-  *
-  * @implements CompilerInterface
-  * @extends AbstractCompiler
-  * @param {ApacheContext|NginxContext} Context - A Apache/Nginx Context instance
-  */
-
-	function NginxCompiler(Context) {
-		_classCallCheck(this, NginxCompiler);
-
-		return _possibleConstructorReturn(this, Object.getPrototypeOf(NginxCompiler).call(this, Context));
-	}
-
-	/**
-  * Parse and compile a single syntax expression into nginx conf
-  *
-  * @abstract
-  * @protected
-  * @param {Object} expression - A single syntax expression to compile
-  * @returns {string}
-  */
-
-
-	_createClass(NginxCompiler, [{
-		key: '_expression',
-		value: function _expression(expression) {
-			if (!expression.hasOwnProperty('type')) {
-				throw new Error('Expression must have a type');
-			}
-
-			switch (expression.type) {
-				case 'AssignmentExpression':
-					this._assignmentExpression(expression);
-					break;
-				case 'Identifier':
-					this._identifier(expression);
-					break;
-				case 'Literal':
-					this._literal(expression);
-					break;
-				case 'LocationBlock':
-					this._generateBlockStatement(expression);
-					break;
-				case 'Include':
-					this._include(expression);
-					break;
-				case 'Variable':
-					this._variable(expression);
-					break;
-				default:
-					break;
-			}
-
-			return this._line;
-		}
-
-		/**
-   * Compile a Block Statement, like a location block
-   *
-   * @param {Object} expression - A syntax expression
-   * @param {String} type - The type of context being created, ie. location
-   * @protected
-   */
-
-	}, {
-		key: '_generateBlockStatement',
-		value: function _generateBlockStatement(expression, type) {
-			if (!expression.hasOwnProperty('directive') || !expression.hasOwnProperty('body')) {
-				throw new Error('Directory block requires a directive and a body');
-			}
-
-			var childContext = this._Context.addContext(expression.directive, type),
-			    compiler = new NginxCompiler(childContext);
-
-			compiler.compile(expression.body.expressions);
-		}
-
-		/**
-   * Compile a directive to include another file
-   *
-   * @param {Object} expression - A syntax expression
-   * @protected
-   */
-
-	}, {
-		key: '_include',
-		value: function _include(expression) {
-			if (!expression.hasOwnProperty('file')) {
-				throw new Error('Include requires a parameter');
-			}
-
-			this._line += 'include ' + expression.file;
-		}
-	}]);
-
-	return NginxCompiler;
-}(_AbstractCompiler3.default);
-
-exports.default = NginxCompiler;
-
-},{"6":6}],10:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _ContextInterface2 = require(12);
-
-var _ContextInterface3 = _interopRequireDefault(_ContextInterface2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var AbstractContext = function (_ContextInterface) {
-	_inherits(AbstractContext, _ContextInterface);
-
-	/**
-  * Context holds all the information about particular block: it's <i>directive</i>, it's lines, it's child contexts,
-  * as well as it's syntax and compiler instances.
-  *
-  * @implements ContextInterface
-  * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
-  * @param {String} type - The block type, ie. location, Location, Directory, etc.
-  * @property {Config} Config - A config instance
-  * @property {ApacheSyntax|NginxSyntax} Syntax - An apache/nginx Syntax instance
-  * @property {ApacheCompiler|NginxCompiler} Compiler - An apache/nginx Compiler instance
-  */
-
-	function AbstractContext(directive, type) {
-		_classCallCheck(this, AbstractContext);
-
-		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AbstractContext).call(this));
-
-		_this.directive = directive;
-		_this.type = type;
-		_this.contexts = [];
-		_this.lines = [];
-		_this.Config;
-		_this.Syntax;
-		_this.Compiler;
-		return _this;
-	}
-
-	return AbstractContext;
-}(_ContextInterface3.default);
-
-exports.default = AbstractContext;
-
-},{"12":12}],11:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _AbstractContext2 = require(10);
-
-var _AbstractContext3 = _interopRequireDefault(_AbstractContext2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var ApacheContext = function (_AbstractContext) {
-	_inherits(ApacheContext, _AbstractContext);
-
-	/**
-  * Holds the information specifically for apache instances
-  *
-  * @implements ContextInterface
-  * @extends AbstractContext
-  * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
-  * @param {String} [type=Location] - The block type, ie. location, Location, Directory, etc.
-  */
-
-	function ApacheContext() {
-		var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
-		var type = arguments.length <= 1 || arguments[1] === undefined ? 'Location' : arguments[1];
-
-		_classCallCheck(this, ApacheContext);
-
-		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(ApacheContext).call(this, directive, type));
-
-		if (['Location', 'LocationMatch', 'Directory', 'Proxy'].indexOf(type) === -1) {
-			throw new Error('Invalid context type "' + type + '"');
-		}
-		return _this;
-	}
-
-	/**
-  * @inheritdoc
-  */
-
-
-	_createClass(ApacheContext, [{
-		key: 'addContext',
-		value: function addContext() {
-			var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
-			var type = arguments.length <= 1 || arguments[1] === undefined ? 'Location' : arguments[1];
-
-			var context = new ApacheContext(directive, type);
-			this.contexts.push(context);
-
-			return context;
-		}
-	}]);
-
-	return ApacheContext;
-}(_AbstractContext3.default);
-
-exports.default = ApacheContext;
-
-},{"10":10}],12:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @license
- *
- * Copyright 2016- Luke Jones (https://github.com/luke-j)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-var ContextInterface = function () {
-
-  /**
-   * Each server context must implement this interface
-   *
-   * @interface
-   */
-
-  function ContextInterface() {
-    _classCallCheck(this, ContextInterface);
-  }
-
-  /**
-   * Adds a child context to the (current) parent context
-   *
-   * @abstract
-   * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
-   * @param {String} type - The block type, ie. location, Location, Directory, etc.
-   */
-
-
-  _createClass(ContextInterface, [{
-    key: "addContext",
-    value: function addContext(directive, type) {// eslint-disable-line no-unused-vars
-    }
-  }]);
-
-  return ContextInterface;
-}();
-
-exports.default = ContextInterface;
-
-},{}],13:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _AbstractContext2 = require(10);
-
-var _AbstractContext3 = _interopRequireDefault(_AbstractContext2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var NginxContext = function (_AbstractContext) {
-	_inherits(NginxContext, _AbstractContext);
-
-	/**
-  * Holds the information specifically for nginx instances
-  *
-  * @implements ContextInterface
-  * @extends AbstractContext
-  * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
-  * @param {String} [type=location] - The block type, ie. location, Location, Directory, etc.
-  */
-
-	function NginxContext() {
-		var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
-		var type = arguments.length <= 1 || arguments[1] === undefined ? 'location' : arguments[1];
-
-		_classCallCheck(this, NginxContext);
-
-		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(NginxContext).call(this, directive, type));
-
-		if (type !== 'location') {
-			throw new Error('Invalid context type "' + type + '"');
-		}
-		return _this;
-	}
-
-	/**
-  * @inheritdoc
-  */
-
-
-	_createClass(NginxContext, [{
-		key: 'addContext',
-		value: function addContext() {
-			var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
-			var type = arguments.length <= 1 || arguments[1] === undefined ? 'location' : arguments[1];
-
-			var context = new NginxContext(directive, type);
-			this.contexts.push(context);
-
-			return context;
-		}
-	}]);
-
-	return NginxContext;
-}(_AbstractContext3.default);
-
-exports.default = NginxContext;
-
-},{"10":10}],14:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _SyntaxInterface2 = require(16);
-
-var _SyntaxInterface3 = _interopRequireDefault(_SyntaxInterface2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var ApacheSyntax = function (_SyntaxInterface) {
-	_inherits(ApacheSyntax, _SyntaxInterface);
-
-	/**
-  * Defines syntax required specifically for Apache conf directives
-  *
-  * @implements SyntaxInterface
-  * @param {ApacheContext|NginxContext} Context
-  */
-
-	function ApacheSyntax(Context) {
-		_classCallCheck(this, ApacheSyntax);
-
-		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(ApacheSyntax).call(this));
-
-		_this._config = Context.Config.options;
-		return _this;
-	}
-
-	/**
-  *  @inheritdoc
-  */
-
-
-	_createClass(ApacheSyntax, [{
-		key: 'name',
-		value: function name() {
-			return {
-				expressions: [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'ServerName'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.name
-					}
-				}]
-			};
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'aliases',
-		value: function aliases() {
-			var expression = {
-				expressions: []
-			};
-
-			(this._config.aliases || []).forEach(function (alias) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'ServerAlias'
-					},
-					right: {
-						type: 'Literal',
-						value: alias
-					}
-				});
-			});
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'port',
-		value: function port() {
-			return {
-				expressions: []
-			};
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'ssl',
-		value: function ssl() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.ssl.enable) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'SSLEngine'
-					},
-					right: {
-						type: 'Literal',
-						value: 'On'
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'SSLCertificateFile'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.ssl.cert
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'SSLCertificateKeyFile'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.ssl.key
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'accessLog',
-		value: function accessLog() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.accessLog) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'CustomLog'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.accessLog,
-						right: {
-							type: 'Literal',
-							value: 'combined'
-						}
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'errorLog',
-		value: function errorLog() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.errorLog) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'ErrorLog'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.errorLog
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'root',
-		value: function root() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.root) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'DocumentRoot'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.root
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'fastcgi',
-		value: function fastcgi() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.fastcgi) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'AddHandler'
-					},
-					right: {
-						type: 'Literal',
-						value: 'php5-fcgi',
-						right: {
-							type: 'Literal',
-							value: '.php'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'Action'
-					},
-					right: {
-						type: 'Literal',
-						value: 'php5-fcgi',
-						right: {
-							type: 'Literal',
-							value: '/php5-fcgi'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'Alias'
-					},
-					right: {
-						type: 'Literal',
-						value: '/php5-fcgi',
-						right: {
-							type: 'Literal',
-							value: '/usr/lib/cgi-bin/php5-fcgi'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'FastCgiExternalServer'
-					},
-					right: {
-						type: 'Literal',
-						value: '/usr/lib/cgi-bin/php5-fcgi',
-						right: {
-							type: 'Literal',
-							value: '-host',
-							right: {
-								type: 'Literal',
-								value: '127.0.0.1:9000',
-								right: {
-									type: 'Literal',
-									value: '-pass-header',
-									right: {
-										type: 'Literal',
-										value: 'Authorization'
-									}
-								}
-							}
-						}
-					}
-				}, {
-					type: 'DirectoryBlock',
-					directive: '/usr/lib/cgi-bin',
-					body: {
-						expressions: [{
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'Require'
-							},
-							right: {
-								type: 'Literal',
-								value: 'all',
-								right: {
-									type: 'Literal',
-									value: 'granted'
-								}
-							}
-						}]
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'compress',
-		value: function compress() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.compress.enable) {
-				this._config.compress.types.forEach(function (type) {
-					expression.expressions.push({
-						type: 'AssignmentExpression',
-						left: {
-							type: 'Identifier',
-							value: 'AddOutputFilterByType'
-						},
-						right: {
-							type: 'Literal',
-							value: 'DEFLATE',
-							right: {
-								type: 'Literal',
-								value: type
-							}
-						}
-					});
-				});
-
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'Header'
-					},
-					right: {
-						type: 'Literal',
-						value: 'set',
-						right: {
-							type: 'Literal',
-							value: 'Vary',
-							right: {
-								type: 'Literal',
-								value: '*'
-							}
-						}
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'headers',
-		value: function headers() {
-			var expression = {
-				expressions: []
-			};
-
-			for (var header in this._config.headers.set) {
-				if (this._config.headers.set.hasOwnProperty(header)) {
-					expression.expressions.push({
-						type: 'AssignmentExpression',
-						left: {
-							type: 'Identifier',
-							value: 'Header'
-						},
-						right: {
-							type: 'Literal',
-							value: 'set',
-							right: {
-								type: 'Literal',
-								value: header,
-								right: {
-									type: 'Literal',
-									value: '"' + this._config.headers.set[header] + '"'
-								}
-							}
-						}
-					});
-				}
-			}
-
-			if (this._config.headers.unset) {
-				this._config.headers.unset.forEach(function (header) {
-					expression.expressions.push({
-						type: 'AssignmentExpression',
-						left: {
-							type: 'Identifier',
-							value: 'Header'
-						},
-						right: {
-							type: 'Literal',
-							value: 'unset',
-							right: {
-								type: 'Literal',
-								value: header
-							}
-						}
-					});
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'serverSignature',
-		value: function serverSignature() {
-			return {
-				expressions: [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'ServerSignature'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.serverSignature ? 'On' : 'Off'
-					}
-				}]
-			};
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'index',
-		value: function index() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.index.length) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'DirectoryIndex'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.index.join(' ')
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'redirect',
-		value: function redirect() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.redirect.enable) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'RedirectMatch'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.redirect.permanent ? '301' : '302',
-						right: {
-							type: 'Literal',
-							value: '^(.*)$',
-							right: {
-								type: 'Literal',
-								value: this._config.redirect.to
-							}
-						}
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'listDirectories',
-		value: function listDirectories() {
-			return {
-				expressions: [{
-					type: 'LocationBlock',
-					directive: '/',
-					body: {
-						expressions: [{
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'Options'
-							},
-							right: {
-								type: 'Literal',
-								value: this._config.listDirectories ? '+Indexes' : '-Indexes',
-								right: {
-									type: 'Literal',
-									value: '+FollowSymLinks'
-								}
-							}
-						}]
-					}
-				}]
-			};
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'caching',
-		value: function caching() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.caching.enable) {
-				expression.expressions = [{
-					type: 'LocationMatchBlock',
-					directive: '".(' + this._config.caching.types.join('|') + ')$"',
-					body: {
-						expressions: [{
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'ExpiresActive'
-							},
-							right: {
-								type: 'Literal',
-								value: 'On'
-							}
-						}, {
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'ExpiresDefault'
-							},
-							right: {
-								type: 'Literal',
-								value: ('"access plus\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.years + ' years\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.months + ' months\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.weeks + ' weeks\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.days + ' days\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.minutes + ' minutes"').replace(/\n/g, '')
-							}
-						}]
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'auth',
-		value: function auth() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.auth.enable) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'AuthType'
-					},
-					right: {
-						type: 'Literal',
-						value: 'Basic'
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'AuthName'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.auth.message
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'AuthUserFile'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.auth.userFile
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'Require'
-					},
-					right: {
-						type: 'Literal',
-						value: 'valid-user'
-					}
-				}];
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'proxy',
-		value: function proxy() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.proxy.enable) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'ProxyRequests'
-					},
-					right: {
-						type: 'Literal',
-						value: 'Off'
-					}
-				}, {
-					type: 'ProxyBlock',
-					directive: '*',
-					body: {
-						expressions: [{
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Literal',
-								value: 'Order'
-							},
-							right: {
-								type: 'Literal',
-								value: 'deny,allow'
-							}
-						}]
-					}
-				}, {
-					type: 'LocationBlock',
-					directive: '/',
-					body: {
-						expressions: [{
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'ProxyPass'
-							},
-							right: {
-								type: 'Literal',
-								value: this._config.proxy.to
-							}
-						}, {
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'ProxyPassReverse'
-							},
-							right: {
-								type: 'Literal',
-								value: this._config.proxy.to
-							}
-						}]
-					}
-				}];
-			}
-
-			return expression;
-		}
-	}]);
-
-	return ApacheSyntax;
-}(_SyntaxInterface3.default);
-
-exports.default = ApacheSyntax;
-
-},{"16":16}],15:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _SyntaxInterface2 = require(16);
-
-var _SyntaxInterface3 = _interopRequireDefault(_SyntaxInterface2);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-var NginxSyntax = function (_SyntaxInterface) {
-	_inherits(NginxSyntax, _SyntaxInterface);
-
-	/**
-  * Defines syntax required specifically for Nginx conf directives
-  *
-  * @implements SyntaxInterface
-  * @param {ApacheContext|NginxContext} Context
-  */
-
-	function NginxSyntax(Context) {
-		_classCallCheck(this, NginxSyntax);
-
-		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(NginxSyntax).call(this));
-
-		_this._config = Context.Config.options;
-		return _this;
-	}
-
-	/**
-  *  @inheritdoc
-  */
-
-
-	_createClass(NginxSyntax, [{
-		key: 'name',
-		value: function name() {
-			return {
-				expressions: [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'server_name'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.name,
-						right: {
-							type: 'Literal',
-							value: this._config.aliases && this._config.aliases.join(' ')
-						}
-					}
-				}]
-			};
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'aliases',
-		value: function aliases() {
-			return {
-				expressions: []
-			};
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'port',
-		value: function port() {
-			var expression = {
-				expressions: [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'listen'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.port
-					}
-				}]
-			};
-
-			if (this._config.ssl.enable) {
-				expression.expressions[0].right.right = {
-					type: 'Literal',
-					value: 'ssl'
-				};
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'ssl',
-		value: function ssl() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.ssl.enable) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'ssl_certificate'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.ssl.cert
-					}
-				});
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'ssl_certificate_key'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.ssl.key
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'accessLog',
-		value: function accessLog() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.accessLog !== null) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'access_log'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.accessLog
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'errorLog',
-		value: function errorLog() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.errorLog !== null) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'error_log'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.errorLog
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'root',
-		value: function root() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.root !== null) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'root'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.root
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'fastcgi',
-		value: function fastcgi() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.fastcgi) {
-				expression.expressions.push({
-					type: 'LocationBlock',
-					directive: '~ \.php$',
-					body: {
-						expressions: [{
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'fastcgi_split_path_info'
-							},
-							right: {
-								type: 'Literal',
-								value: '^(.+\.php)(/.+)$'
-							}
-						}, {
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'fastcgi_pass'
-							},
-							right: {
-								type: 'Literal',
-								value: 'unix:/var/run/php5-fpm.sock'
-							}
-						}, {
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'fastcgi_index'
-							},
-							right: {
-								type: 'Literal',
-								value: 'index.php'
-							}
-						}, {
-							type: 'Include',
-							file: 'fastcgi_params'
-						}]
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'compress',
-		value: function compress() {
-			var expression = {
-				expressions: []
-			};
-
-			expression.expressions.push({
-				type: 'AssignmentExpression',
-				left: {
-					type: 'Identifier',
-					value: 'gzip'
-				},
-				right: {
-					type: 'Literal',
-					value: this._config.compress.enable ? 'on' : 'off'
-				}
-			});
-
-			if (this._config.compress.enable) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'gzip_http_version'
-					},
-					right: {
-						type: 'Literal',
-						value: '1.1'
-					}
-				});
-
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'gzip_proxied'
-					},
-					right: {
-						type: 'Literal',
-						value: 'any'
-					}
-				});
-
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'gzip_types'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.compress.types.join(' ')
-					}
-				});
-
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'gzip_vary'
-					},
-					right: {
-						type: 'Literal',
-						value: 'on'
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'headers',
-		value: function headers() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.headers.set !== null) {
-				for (var header in this._config.headers.set) {
-					if (this._config.headers.set.hasOwnProperty(header)) {
-						expression.expressions.push({
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'add_header'
-							},
-							right: {
-								type: 'Literal',
-								value: header,
-								right: {
-									type: 'Literal',
-									value: '"' + this._config.headers.set[header] + '"'
-								}
-							}
-						});
-					}
-				}
-			}
-
-			if (this._config.headers.unset !== null) {
-				this._config.headers.unset.forEach(function (header) {
-					expression.expressions.push({
-						type: 'AssignmentExpression',
-						left: {
-							type: 'Identifier',
-							value: 'add_header'
-						},
-						right: {
-							type: 'Literal',
-							value: header,
-							right: {
-								type: 'Literal',
-								value: '""'
-							}
-						}
-					});
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'serverSignature',
-		value: function serverSignature() {
-			var expression = {
-				expressions: []
-			};
-
-			expression.expressions.push({
-				type: 'AssignmentExpression',
-				left: {
-					type: 'Identifier',
-					value: 'server_tokens'
-				},
-				right: {
-					type: 'Literal',
-					value: this._config.serverSignature ? 'on' : 'off'
-				}
-			});
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'index',
-		value: function index() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.index.length) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'index'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.index.join(' ')
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'redirect',
-		value: function redirect() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.redirect.enable) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'return'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.redirect.permanent ? '301' : '302',
-						right: {
-							type: 'Literal',
-							value: this._config.redirect.to
-						}
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'listDirectories',
-		value: function listDirectories() {
-			return {
-				expressions: [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'autoindex'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.listDirectories ? 'on' : 'off'
-					}
-				}]
-			};
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'caching',
-		value: function caching() {
-			var expression = {
-				expressions: []
-			},
-			    minutesInOneYear = 525600;
-			var expires = 0;
-
-			if (this._config.caching.enable) {
-				expires += this._config.caching.expires.years * minutesInOneYear;
-				expires += this._config.caching.expires.months * minutesInOneYear / 12;
-				expires += this._config.caching.expires.weeks * minutesInOneYear / 52;
-				expires += this._config.caching.expires.days * minutesInOneYear / 365;
-				expires += this._config.caching.expires.minutes;
-
-				expression.expressions.push({
-					type: 'LocationBlock',
-					directive: '~* .(?:' + this._config.caching.types.join('|') + '$',
-					body: {
-						expressions: [{
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'expires'
-							},
-							right: {
-								type: 'Literal',
-								value: expires + 'm'
-							}
-						}, {
-							type: 'AssignmentExpression',
-							left: {
-								type: 'Identifier',
-								value: 'add_header'
-							},
-							right: {
-								type: 'Literal',
-								value: 'Cache-Control',
-								right: {
-									type: 'Literal',
-									value: '"public"'
-								}
-							}
-						}]
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'auth',
-		value: function auth() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.auth.enable) {
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'auth_basic'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.auth.message
-					}
-				});
-
-				expression.expressions.push({
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'auth_basic_user_file'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.auth.userFile
-					}
-				});
-			}
-
-			return expression;
-		}
-
-		/**
-   *  @inheritdoc
-   */
-
-	}, {
-		key: 'proxy',
-		value: function proxy() {
-			var expression = {
-				expressions: []
-			};
-
-			if (this._config.proxy.enable) {
-				expression.expressions = [{
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_pass'
-					},
-					right: {
-						type: 'Literal',
-						value: this._config.proxy.to
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_cache_valid'
-					},
-					right: {
-						type: 'Literal',
-						value: 'any',
-						right: {
-							type: 'Literal',
-							value: '0'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_set_header'
-					},
-					right: {
-						type: 'Literal',
-						value: 'Host',
-						right: {
-							type: 'Variable',
-							value: '$host'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_set_header'
-					},
-					right: {
-						type: 'Literal',
-						value: 'X-Forwarded-Proto',
-						right: {
-							type: 'Variable',
-							value: '$scheme'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_set_header'
-					},
-					right: {
-						type: 'Literal',
-						value: 'X-Forwarded-For',
-						right: {
-							type: 'Variable',
-							value: '$proxy_add_x_forwarded_for'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_set_header'
-					},
-					right: {
-						type: 'Literal',
-						value: 'X-Real-IP',
-						right: {
-							type: 'Variable',
-							value: '$remote_addr'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_http_version'
-					},
-					right: {
-						type: 'Literal',
-						value: '1.1'
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_set_header'
-					},
-					right: {
-						type: 'Literal',
-						value: 'Upgrade',
-						right: {
-							type: 'Variable',
-							value: '$http_upgrade'
-						}
-					}
-				}, {
-					type: 'AssignmentExpression',
-					left: {
-						type: 'Identifier',
-						value: 'proxy_set_header'
-					},
-					right: {
-						type: 'Literal',
-						value: 'Connection',
-						right: {
-							type: 'Literal',
-							value: '"upgrade"'
-						}
-					}
-				}];
-			}
-
-			return expression;
-		}
-	}]);
-
-	return NginxSyntax;
-}(_SyntaxInterface3.default);
-
-exports.default = NginxSyntax;
-
-},{"16":16}],16:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-	value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * @license
- *
- * Copyright 2016- Luke Jones (https://github.com/luke-j)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-var SyntaxInterface = function () {
-
-	/**
-  * Each method defines the syntax required to write the directives for a particular config option, for
-  * example, the "DocumentRoot" directive requires an identifier - "DocumentRoot" - followed by a literal
-  * - "/web/root". Each method must define it's syntax requirements to fulfill its config option by writing
-  * these requires as syntax objects to be parsed anc compiled later.
-  * <br><br>
-  * The syntax form concrete-syntax-tree like objects, but aren't strictly CTSs, so they don't follow all
-  * the rules.
-  * <br><br>
-  * Each configuration option must have a method with the same name in this interface, each server type
-  * must implement this interface.
-  *
-  * @interface
-  */
-
-	function SyntaxInterface() {
-		_classCallCheck(this, SyntaxInterface);
-	}
-
-	/**
-  * Syntax corresponding with the options key, being the server name
-  *
-  * @abstract
-  * @returns {Object}
-  */
-
-
-	_createClass(SyntaxInterface, [{
-		key: "name",
-		value: function name() {}
-
-		/**
-   * Syntax corresponding with the "aliases" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "aliases",
-		value: function aliases() {}
-
-		/**
-   * Syntax corresponding with the "port" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "port",
-		value: function port() {}
-
-		/**
-   * Syntax corresponding with the "ssl" options
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "ssl",
-		value: function ssl() {}
-
-		/**
-   * Syntax corresponding with the "accessLog" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "accessLog",
-		value: function accessLog() {}
-
-		/**
-   * Syntax corresponding with the "errorLog" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "errorLog",
-		value: function errorLog() {}
-
-		/**
-   * Syntax corresponding with the "root" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "root",
-		value: function root() {}
-
-		/**
-   * Syntax corresponding with the "fastcgi" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "fastcgi",
-		value: function fastcgi() {}
-
-		/**
-   * Syntax corresponding with the "compress" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "compress",
-		value: function compress() {}
-
-		/**
-   * Syntax corresponding with the "headers.set" and "header.unset" options
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "headers",
-		value: function headers() {}
-
-		/**
-   * Syntax corresponding with the "serverSignature" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "serverSignature",
-		value: function serverSignature() {}
-
-		/**
-   * Syntax corresponding with the "index" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "index",
-		value: function index() {}
-
-		/**
-   * Syntax corresponding with the "redirect" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "redirect",
-		value: function redirect() {}
-
-		/**
-   * Syntax corresponding with the "listDirectories" option
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "listDirectories",
-		value: function listDirectories() {}
-
-		/**
-   * Syntax corresponding with the "caching" options
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "caching",
-		value: function caching() {}
-
-		/**
-   * Syntax corresponding with the "auto" options
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "auth",
-		value: function auth() {}
-
-		/**
-   * Syntax corresponding with the "proxy" options
-   *
-   * @abstract
-   * @returns {Object}
-   */
-
-	}, {
-		key: "proxy",
-		value: function proxy() {}
-	}]);
-
-	return SyntaxInterface;
-}();
-
-exports.default = SyntaxInterface;
-
-},{}],17:[function(require,module,exports){
 (function (process,__filename){
 /** vim: et:ts=4:sw=4:sts=4
  * @license amdefine 1.0.0 Copyright (c) 2011-2015, The Dojo Foundation All Rights Reserved.
@@ -3384,7 +25,7 @@ function amdefine(module, requireFn) {
     var defineCache = {},
         loaderCache = {},
         alreadyCalled = false,
-        path = require(60),
+        path = require(44),
         makeRequire, stringRequire;
 
     /**
@@ -3661,11 +302,11 @@ function amdefine(module, requireFn) {
 
 module.exports = amdefine;
 
-}).call(this,require(61),"/node_modules/amdefine/amdefine.js")
+}).call(this,require(45),"/node_modules/amdefine/amdefine.js")
 
-},{"60":60,"61":61}],18:[function(require,module,exports){
+},{"44":44,"45":45}],2:[function(require,module,exports){
 
-},{}],19:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3673,29 +314,29 @@ exports.__esModule = true;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _handlebarsRuntime = require(20);
+var _handlebarsRuntime = require(4);
 
 var _handlebarsRuntime2 = _interopRequireDefault(_handlebarsRuntime);
 
 // Compiler imports
 
-var _handlebarsCompilerAst = require(22);
+var _handlebarsCompilerAst = require(6);
 
 var _handlebarsCompilerAst2 = _interopRequireDefault(_handlebarsCompilerAst);
 
-var _handlebarsCompilerBase = require(23);
+var _handlebarsCompilerBase = require(7);
 
-var _handlebarsCompilerCompiler = require(25);
+var _handlebarsCompilerCompiler = require(9);
 
-var _handlebarsCompilerJavascriptCompiler = require(27);
+var _handlebarsCompilerJavascriptCompiler = require(11);
 
 var _handlebarsCompilerJavascriptCompiler2 = _interopRequireDefault(_handlebarsCompilerJavascriptCompiler);
 
-var _handlebarsCompilerVisitor = require(30);
+var _handlebarsCompilerVisitor = require(14);
 
 var _handlebarsCompilerVisitor2 = _interopRequireDefault(_handlebarsCompilerVisitor);
 
-var _handlebarsNoConflict = require(44);
+var _handlebarsNoConflict = require(28);
 
 var _handlebarsNoConflict2 = _interopRequireDefault(_handlebarsNoConflict);
 
@@ -3732,7 +373,7 @@ exports['default'] = inst;
 module.exports = exports['default'];
 
 
-},{"20":20,"22":22,"23":23,"25":25,"27":27,"30":30,"44":44}],20:[function(require,module,exports){
+},{"11":11,"14":14,"28":28,"4":4,"6":6,"7":7,"9":9}],4:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3744,30 +385,30 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
 
-var _handlebarsBase = require(21);
+var _handlebarsBase = require(5);
 
 var base = _interopRequireWildcard(_handlebarsBase);
 
 // Each of these augment the Handlebars object. No need to setup here.
 // (This is done to easily share code between commonjs and browse envs)
 
-var _handlebarsSafeString = require(46);
+var _handlebarsSafeString = require(30);
 
 var _handlebarsSafeString2 = _interopRequireDefault(_handlebarsSafeString);
 
-var _handlebarsException = require(34);
+var _handlebarsException = require(18);
 
 var _handlebarsException2 = _interopRequireDefault(_handlebarsException);
 
-var _handlebarsUtils = require(47);
+var _handlebarsUtils = require(31);
 
 var Utils = _interopRequireWildcard(_handlebarsUtils);
 
-var _handlebarsRuntime = require(45);
+var _handlebarsRuntime = require(29);
 
 var runtime = _interopRequireWildcard(_handlebarsRuntime);
 
-var _handlebarsNoConflict = require(44);
+var _handlebarsNoConflict = require(28);
 
 var _handlebarsNoConflict2 = _interopRequireDefault(_handlebarsNoConflict);
 
@@ -3800,7 +441,7 @@ exports['default'] = inst;
 module.exports = exports['default'];
 
 
-},{"21":21,"34":34,"44":44,"45":45,"46":46,"47":47}],21:[function(require,module,exports){
+},{"18":18,"28":28,"29":29,"30":30,"31":31,"5":5}],5:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3809,17 +450,17 @@ exports.HandlebarsEnvironment = HandlebarsEnvironment;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utils = require(47);
+var _utils = require(31);
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
-var _helpers = require(35);
+var _helpers = require(19);
 
-var _decorators = require(32);
+var _decorators = require(16);
 
-var _logger = require(43);
+var _logger = require(27);
 
 var _logger2 = _interopRequireDefault(_logger);
 
@@ -3906,7 +547,7 @@ exports.createFrame = _utils.createFrame;
 exports.logger = _logger2['default'];
 
 
-},{"32":32,"34":34,"35":35,"43":43,"47":47}],22:[function(require,module,exports){
+},{"16":16,"18":18,"19":19,"27":27,"31":31}],6:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3939,7 +580,7 @@ exports['default'] = AST;
 module.exports = exports['default'];
 
 
-},{}],23:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -3952,19 +593,19 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _parser = require(28);
+var _parser = require(12);
 
 var _parser2 = _interopRequireDefault(_parser);
 
-var _whitespaceControl = require(31);
+var _whitespaceControl = require(15);
 
 var _whitespaceControl2 = _interopRequireDefault(_whitespaceControl);
 
-var _helpers = require(26);
+var _helpers = require(10);
 
 var Helpers = _interopRequireWildcard(_helpers);
 
-var _utils = require(47);
+var _utils = require(31);
 
 exports.parser = _parser2['default'];
 
@@ -3989,13 +630,13 @@ function parse(input, options) {
 }
 
 
-},{"26":26,"28":28,"31":31,"47":47}],24:[function(require,module,exports){
+},{"10":10,"12":12,"15":15,"31":31}],8:[function(require,module,exports){
 /* global define */
 'use strict';
 
 exports.__esModule = true;
 
-var _utils = require(47);
+var _utils = require(31);
 
 var SourceNode = undefined;
 
@@ -4004,7 +645,7 @@ try {
   if (typeof define !== 'function' || !define.amd) {
     // We don't support this in AMD environments. For these environments, we asusme that
     // they are running on the browser and thus have no need for the source-map library.
-    var SourceMap = require(49);
+    var SourceMap = require(33);
     SourceNode = SourceMap.SourceNode;
   }
 } catch (err) {}
@@ -4157,7 +798,7 @@ exports['default'] = CodeGen;
 module.exports = exports['default'];
 
 
-},{"47":47,"49":49}],25:[function(require,module,exports){
+},{"31":31,"33":33}],9:[function(require,module,exports){
 /* eslint-disable new-cap */
 
 'use strict';
@@ -4170,13 +811,13 @@ exports.compile = compile;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
-var _utils = require(47);
+var _utils = require(31);
 
-var _ast = require(22);
+var _ast = require(6);
 
 var _ast2 = _interopRequireDefault(_ast);
 
@@ -4731,7 +1372,7 @@ function transformLiteralToPath(sexpr) {
 }
 
 
-},{"22":22,"34":34,"47":47}],26:[function(require,module,exports){
+},{"18":18,"31":31,"6":6}],10:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -4749,7 +1390,7 @@ exports.preparePartialBlock = preparePartialBlock;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
@@ -4963,7 +1604,7 @@ function preparePartialBlock(open, program, close, locInfo) {
 }
 
 
-},{"34":34}],27:[function(require,module,exports){
+},{"18":18}],11:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -4971,15 +1612,15 @@ exports.__esModule = true;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _base = require(21);
+var _base = require(5);
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
-var _utils = require(47);
+var _utils = require(31);
 
-var _codeGen = require(24);
+var _codeGen = require(8);
 
 var _codeGen2 = _interopRequireDefault(_codeGen);
 
@@ -6091,7 +2732,7 @@ exports['default'] = JavaScriptCompiler;
 module.exports = exports['default'];
 
 
-},{"21":21,"24":24,"34":34,"47":47}],28:[function(require,module,exports){
+},{"18":18,"31":31,"5":5,"8":8}],12:[function(require,module,exports){
 /* istanbul ignore next */
 /* Jison generated parser */
 "use strict";
@@ -6831,7 +3472,7 @@ var handlebars = (function () {
 exports['default'] = handlebars;
 
 
-},{}],29:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 /* eslint-disable new-cap */
 'use strict';
 
@@ -6842,7 +3483,7 @@ exports.PrintVisitor = PrintVisitor;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _visitor = require(30);
+var _visitor = require(14);
 
 var _visitor2 = _interopRequireDefault(_visitor);
 
@@ -7019,7 +3660,7 @@ PrintVisitor.prototype.HashPair = function (pair) {
 /* eslint-enable new-cap */
 
 
-},{"30":30}],30:[function(require,module,exports){
+},{"14":14}],14:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7027,7 +3668,7 @@ exports.__esModule = true;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
@@ -7161,7 +3802,7 @@ exports['default'] = Visitor;
 module.exports = exports['default'];
 
 
-},{"34":34}],31:[function(require,module,exports){
+},{"18":18}],15:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7169,7 +3810,7 @@ exports.__esModule = true;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _visitor = require(30);
+var _visitor = require(14);
 
 var _visitor2 = _interopRequireDefault(_visitor);
 
@@ -7384,7 +4025,7 @@ exports['default'] = WhitespaceControl;
 module.exports = exports['default'];
 
 
-},{"30":30}],32:[function(require,module,exports){
+},{"14":14}],16:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7393,7 +4034,7 @@ exports.registerDefaultDecorators = registerDefaultDecorators;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _decoratorsInline = require(33);
+var _decoratorsInline = require(17);
 
 var _decoratorsInline2 = _interopRequireDefault(_decoratorsInline);
 
@@ -7402,12 +4043,12 @@ function registerDefaultDecorators(instance) {
 }
 
 
-},{"33":33}],33:[function(require,module,exports){
+},{"17":17}],17:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
 
-var _utils = require(47);
+var _utils = require(31);
 
 exports['default'] = function (instance) {
   instance.registerDecorator('inline', function (fn, props, container, options) {
@@ -7433,7 +4074,7 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{"47":47}],34:[function(require,module,exports){
+},{"31":31}],18:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7475,7 +4116,7 @@ exports['default'] = Exception;
 module.exports = exports['default'];
 
 
-},{}],35:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7484,31 +4125,31 @@ exports.registerDefaultHelpers = registerDefaultHelpers;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _helpersBlockHelperMissing = require(36);
+var _helpersBlockHelperMissing = require(20);
 
 var _helpersBlockHelperMissing2 = _interopRequireDefault(_helpersBlockHelperMissing);
 
-var _helpersEach = require(37);
+var _helpersEach = require(21);
 
 var _helpersEach2 = _interopRequireDefault(_helpersEach);
 
-var _helpersHelperMissing = require(38);
+var _helpersHelperMissing = require(22);
 
 var _helpersHelperMissing2 = _interopRequireDefault(_helpersHelperMissing);
 
-var _helpersIf = require(39);
+var _helpersIf = require(23);
 
 var _helpersIf2 = _interopRequireDefault(_helpersIf);
 
-var _helpersLog = require(40);
+var _helpersLog = require(24);
 
 var _helpersLog2 = _interopRequireDefault(_helpersLog);
 
-var _helpersLookup = require(41);
+var _helpersLookup = require(25);
 
 var _helpersLookup2 = _interopRequireDefault(_helpersLookup);
 
-var _helpersWith = require(42);
+var _helpersWith = require(26);
 
 var _helpersWith2 = _interopRequireDefault(_helpersWith);
 
@@ -7523,12 +4164,12 @@ function registerDefaultHelpers(instance) {
 }
 
 
-},{"36":36,"37":37,"38":38,"39":39,"40":40,"41":41,"42":42}],36:[function(require,module,exports){
+},{"20":20,"21":21,"22":22,"23":23,"24":24,"25":25,"26":26}],20:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
 
-var _utils = require(47);
+var _utils = require(31);
 
 exports['default'] = function (instance) {
   instance.registerHelper('blockHelperMissing', function (context, options) {
@@ -7564,7 +4205,7 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{"47":47}],37:[function(require,module,exports){
+},{"31":31}],21:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7572,9 +4213,9 @@ exports.__esModule = true;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _utils = require(47);
+var _utils = require(31);
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
@@ -7660,7 +4301,7 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{"34":34,"47":47}],38:[function(require,module,exports){
+},{"18":18,"31":31}],22:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7668,7 +4309,7 @@ exports.__esModule = true;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
@@ -7687,12 +4328,12 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{"34":34}],39:[function(require,module,exports){
+},{"18":18}],23:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
 
-var _utils = require(47);
+var _utils = require(31);
 
 exports['default'] = function (instance) {
   instance.registerHelper('if', function (conditional, options) {
@@ -7718,7 +4359,7 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{"47":47}],40:[function(require,module,exports){
+},{"31":31}],24:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7746,7 +4387,7 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{}],41:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7760,12 +4401,12 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{}],42:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
 
-var _utils = require(47);
+var _utils = require(31);
 
 exports['default'] = function (instance) {
   instance.registerHelper('with', function (context, options) {
@@ -7795,12 +4436,12 @@ exports['default'] = function (instance) {
 module.exports = exports['default'];
 
 
-},{"47":47}],43:[function(require,module,exports){
+},{"31":31}],27:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
 
-var _utils = require(47);
+var _utils = require(31);
 
 var logger = {
   methodMap: ['debug', 'info', 'warn', 'error'],
@@ -7844,7 +4485,7 @@ exports['default'] = logger;
 module.exports = exports['default'];
 
 
-},{"47":47}],44:[function(require,module,exports){
+},{"31":31}],28:[function(require,module,exports){
 (function (global){
 /* global window */
 'use strict';
@@ -7869,7 +4510,7 @@ module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{}],45:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -7887,15 +4528,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj['default'] = obj; return newObj; } }
 
-var _utils = require(47);
+var _utils = require(31);
 
 var Utils = _interopRequireWildcard(_utils);
 
-var _exception = require(34);
+var _exception = require(18);
 
 var _exception2 = _interopRequireDefault(_exception);
 
-var _base = require(21);
+var _base = require(5);
 
 function checkRevision(compilerInfo) {
   var compilerRevision = compilerInfo && compilerInfo[0] || 1,
@@ -8163,7 +4804,7 @@ function executeDecorators(fn, prog, container, depths, data, blockParams) {
 }
 
 
-},{"21":21,"34":34,"47":47}],46:[function(require,module,exports){
+},{"18":18,"31":31,"5":5}],30:[function(require,module,exports){
 // Build out our basic SafeString type
 'use strict';
 
@@ -8180,7 +4821,7 @@ exports['default'] = SafeString;
 module.exports = exports['default'];
 
 
-},{}],47:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 'use strict';
 
 exports.__esModule = true;
@@ -8306,16 +4947,16 @@ function appendContextPath(contextPath, id) {
 }
 
 
-},{}],48:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 // USAGE:
 // var handlebars = require('handlebars');
 /* eslint-disable no-var */
 
 // var local = handlebars.create();
 
-var handlebars = require(19)['default'];
+var handlebars = require(3)['default'];
 
-var printer = require(29);
+var printer = require(13);
 handlebars.PrintVisitor = printer.PrintVisitor;
 handlebars.print = printer.print;
 
@@ -8323,7 +4964,7 @@ module.exports = handlebars;
 
 // Publish a Node.js require() handler for .handlebars and .hbs files
 function extension(module, filename) {
-  var fs = require(18);
+  var fs = require(2);
   var templateString = fs.readFileSync(filename, 'utf8');
   module.exports = handlebars.compile(templateString);
 }
@@ -8333,17 +4974,17 @@ if (typeof require !== 'undefined' && require.extensions) {
   require.extensions['.hbs'] = extension;
 }
 
-},{"18":18,"19":19,"29":29}],49:[function(require,module,exports){
+},{"13":13,"2":2,"3":3}],33:[function(require,module,exports){
 /*
  * Copyright 2009-2011 Mozilla Foundation and contributors
  * Licensed under the New BSD license. See LICENSE.txt or:
  * http://opensource.org/licenses/BSD-3-Clause
  */
-exports.SourceMapGenerator = require(57).SourceMapGenerator;
-exports.SourceMapConsumer = require(56).SourceMapConsumer;
-exports.SourceNode = require(58).SourceNode;
+exports.SourceMapGenerator = require(41).SourceMapGenerator;
+exports.SourceMapConsumer = require(40).SourceMapConsumer;
+exports.SourceNode = require(42).SourceNode;
 
-},{"56":56,"57":57,"58":58}],50:[function(require,module,exports){
+},{"40":40,"41":41,"42":42}],34:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -8351,11 +4992,11 @@ exports.SourceNode = require(58).SourceNode;
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
-  var util = require(59);
+  var util = require(43);
 
   /**
    * A data structure which is a combination of an array and a set. Adding a new
@@ -8452,7 +5093,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17,"59":59}],51:[function(require,module,exports){
+},{"1":1,"43":43}],35:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -8490,11 +5131,11 @@ define(function (require, exports, module) {
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
-  var base64 = require(52);
+  var base64 = require(36);
 
   // A single base 64 digit can contain 6 bits of data. For the base 64 variable
   // length quantities we use in the source map spec, the first bit is the sign,
@@ -8600,7 +5241,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17,"52":52}],52:[function(require,module,exports){
+},{"1":1,"36":36}],36:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -8608,7 +5249,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
@@ -8675,7 +5316,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17}],53:[function(require,module,exports){
+},{"1":1}],37:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -8683,7 +5324,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
@@ -8794,7 +5435,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17}],54:[function(require,module,exports){
+},{"1":1}],38:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2014 Mozilla Foundation and contributors
@@ -8802,11 +5443,11 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
-  var util = require(59);
+  var util = require(43);
 
   /**
    * Determine whether mappingB is after mappingA with respect to generated
@@ -8882,7 +5523,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17,"59":59}],55:[function(require,module,exports){
+},{"1":1,"43":43}],39:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -8890,7 +5531,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
@@ -9004,7 +5645,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17}],56:[function(require,module,exports){
+},{"1":1}],40:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -9012,15 +5653,15 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
-  var util = require(59);
-  var binarySearch = require(53);
-  var ArraySet = require(50).ArraySet;
-  var base64VLQ = require(51);
-  var quickSort = require(55).quickSort;
+  var util = require(43);
+  var binarySearch = require(37);
+  var ArraySet = require(34).ArraySet;
+  var base64VLQ = require(35);
+  var quickSort = require(39).quickSort;
 
   function SourceMapConsumer(aSourceMap) {
     var sourceMap = aSourceMap;
@@ -10083,7 +6724,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17,"50":50,"51":51,"53":53,"55":55,"59":59}],57:[function(require,module,exports){
+},{"1":1,"34":34,"35":35,"37":37,"39":39,"43":43}],41:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -10091,14 +6732,14 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
-  var base64VLQ = require(51);
-  var util = require(59);
-  var ArraySet = require(50).ArraySet;
-  var MappingList = require(54).MappingList;
+  var base64VLQ = require(35);
+  var util = require(43);
+  var ArraySet = require(34).ArraySet;
+  var MappingList = require(38).MappingList;
 
   /**
    * An instance of the SourceMapGenerator represents a source map which is
@@ -10484,7 +7125,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17,"50":50,"51":51,"54":54,"59":59}],58:[function(require,module,exports){
+},{"1":1,"34":34,"35":35,"38":38,"43":43}],42:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -10492,12 +7133,12 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
-  var SourceMapGenerator = require(57).SourceMapGenerator;
-  var util = require(59);
+  var SourceMapGenerator = require(41).SourceMapGenerator;
+  var util = require(43);
 
   // Matches a Windows-style `\r\n` newline or a `\n` newline used by all other
   // operating systems these days (capturing the result).
@@ -10900,7 +7541,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17,"57":57,"59":59}],59:[function(require,module,exports){
+},{"1":1,"41":41,"43":43}],43:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -10908,7 +7549,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require(17)(module, require);
+    var define = require(1)(module, require);
 }
 define(function (require, exports, module) {
 
@@ -11272,7 +7913,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"17":17}],60:[function(require,module,exports){
+},{"1":1}],44:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -11499,9 +8140,9 @@ var substr = 'ab'.substr(-1) === 'b'
     }
 ;
 
-}).call(this,require(61))
+}).call(this,require(45))
 
-},{"61":61}],61:[function(require,module,exports){
+},{"45":45}],45:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -11594,7 +8235,3366 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}]},{},[4])
+},{}],46:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @license
+ *
+ * Copyright 2016- Luke Jones (https://github.com/luke-j)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+var Config = function () {
+
+	/**
+  * Merges the options given with default options, and adds anything needed into the config object
+  *
+  * @constructor Config
+  * @param {String} type - The "use" parameter, ie. nginx, apache
+  * @param {String} server - The server name, given as the first object key in the config file
+  * @param {Object} config - The config options under the server name
+  * @property {Object} options - The processed config options
+  * @property {Object} locations - The processed config options under each location specified
+  * @property {String} type - The server type, ie. nginx
+  */
+
+	function Config(type, server, config) {
+		_classCallCheck(this, Config);
+
+		this._defaults = {
+			name: server,
+			ssl: {
+				enable: false,
+				cert: null,
+				key: null
+			},
+			port: 80,
+			aliases: [],
+			accessLog: null,
+			errorLog: null,
+			root: null,
+			index: [],
+			fastcgi: false,
+			serverSignature: true,
+			listDirectories: false,
+			compress: {
+				enable: false,
+				types: ['text/plain']
+			},
+			caching: {
+				enable: false,
+				types: ['html'],
+				expires: {
+					years: 0,
+					months: 0,
+					weeks: 0,
+					days: 0,
+					minutes: 0
+				}
+			},
+			auth: {
+				enable: false,
+				message: 'Restricted',
+				userFile: null
+			},
+			headers: {
+				set: null,
+				unset: []
+			},
+			proxy: {
+				enable: false,
+				to: null
+			},
+			redirect: {
+				enable: false,
+				permanent: true,
+				to: null
+			}
+		};
+		this._config = config;
+		this.type = type;
+		this.options = this._deepAssign(this._defaults, this._config, {});
+		this.locations = this._parseLocations(this.options);
+	}
+
+	/**
+  * Recursively merge two objects, with the source object taking precedence over the target object
+  *
+  * @param {Object} target - Object to merge with "source"
+  * @param {Object} source - The object to merge with "target", taking precedence over the "target" object
+  * @returns {Object}
+  * @private
+  */
+
+
+	_createClass(Config, [{
+		key: '_deepAssign',
+		value: function _deepAssign(target, source) {
+			var deeplyAssigned = {};
+			for (var option in target) {
+				if (target.hasOwnProperty(option)) {
+					if (source.hasOwnProperty(option)) {
+						if (target[option] !== null && _typeof(target[option]) === 'object' && target[option].constructor !== Array) {
+							deeplyAssigned[option] = this._deepAssign(target[option], source[option]);
+						} else {
+							deeplyAssigned[option] = source[option];
+						}
+					} else {
+						deeplyAssigned[option] = target[option];
+					}
+				}
+			}
+
+			// assign any properties present in source but absent in target
+			for (var _option in source) {
+				if (source.hasOwnProperty(_option)) {
+					if (!deeplyAssigned.hasOwnProperty(_option)) {
+						deeplyAssigned[_option] = source[_option];
+					}
+				}
+			}
+
+			return deeplyAssigned;
+		}
+
+		/**
+   * Parse the config object, making new objects of any property that starts with a slash and is an object - indicating a location
+   *
+   * @param {Object} config
+   * @returns {Object}
+   * @private
+   */
+
+	}, {
+		key: '_parseLocations',
+		value: function _parseLocations(config) {
+			var locations = {};
+			for (var option in config) {
+				if (config.hasOwnProperty(option)) {
+					// locations must be objects
+					if (config[option] !== null && _typeof(config[option]) === 'object' && config[option].constructor !== Array) {
+						var match = option.match(/^\//g);
+						if (match) {
+							locations[option] = {
+								options: config[option]
+							};
+							delete this.options[option];
+						}
+					}
+				}
+			}
+
+			return locations;
+		}
+	}]);
+
+	return Config;
+}();
+
+exports.default = Config;
+
+},{}],47:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+var _SpiderMonkey = require(48);
+
+var _SpiderMonkey2 = _interopRequireDefault(_SpiderMonkey);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Generator = function () {
+
+	/**
+  * Builds a conf string to be placed into an nginx.conf or apache.conf file
+  *
+  * @param {Config} Config - A config instance
+  * @param {ApacheContext|NginxContext} Context - An uninitialised Context instance
+  * @param {ApacheCompiler|NginxCompiler} Compiler - An uninitialised Compiler instance
+  * @param {ApacheSyntax|NginxSyntax} Syntax - An uninitialised Syntax instance
+  * @param {Handlebars} Handlebars - An instance of Handlebars
+  * @param {String} template - A pre-compiled handlebars template
+  */
+
+	function Generator(Config, Context, Compiler, Syntax, Handlebars, template) {
+		_classCallCheck(this, Generator);
+
+		this._Config = Config;
+		this._Context = Context;
+		this._Compiler = Compiler;
+		this._Syntax = Syntax;
+		this._Handlebars = Handlebars;
+		this._template = template;
+
+		this._mainContext = new this._Context(this._Config.type === 'apache' && '*:' + this._Config.options.port);
+		this._mainContext.Config = this._Config;
+		this._mainContext.Syntax = new this._Syntax(this._mainContext);
+		this._mainContext.Compiler = new this._Compiler(this._mainContext);
+	}
+
+	/**
+  * Compile the necessary syntax and location contexts
+  *
+  * @returns {Generator}
+  */
+
+
+	_createClass(Generator, [{
+		key: 'build',
+		value: function build() {
+			this._compileMainBlock();
+
+			for (var location in this._mainContext.Config.locations) {
+				if (this._mainContext.Config.locations.hasOwnProperty(location)) {
+					this._compileLocationBlock(location, this._mainContext.Config.locations[location]);
+				}
+			}
+
+			return this;
+		}
+
+		/**
+   * Output the compiled string, ready to be placed into a .conf file
+   *
+   * @returns {String}
+   */
+
+	}, {
+		key: 'output',
+		value: function output() {
+			if (this._template) {
+				var template = this._Handlebars.compile(this._template, { noEscape: true });
+
+				return template({
+					context: this._mainContext
+				});
+			}
+
+			return '';
+		}
+
+		/**
+   * Compile the main context of the .conf file, either the server or VirtualHost block
+   *
+   * @private
+   */
+
+	}, {
+		key: '_compileMainBlock',
+		value: function _compileMainBlock() {
+			this._compileContext(this._mainContext);
+		}
+
+		/**
+   * Compile a child context, ie. location, Directory, Proxy, etc.
+   *
+   * @param {String} path - The path (or directive) of the specified location
+   * @param {Object} config - The config options under this location
+   * @private
+   */
+
+	}, {
+		key: '_compileLocationBlock',
+		value: function _compileLocationBlock(path, config) {
+			var locationContext = new this._Context(path);
+			locationContext.Config = config;
+			locationContext.Syntax = new this._Syntax(locationContext);
+			locationContext.Compiler = new this._Compiler(locationContext);
+
+			this._compileContext(locationContext);
+			this._mainContext.contexts.push(locationContext);
+		}
+
+		/**
+   * Compile a specified context, iterating over the necessary expressions and compiling each one
+   *
+   * @param {Context} context - The context to compile
+   * @private
+   */
+
+	}, {
+		key: '_compileContext',
+		value: function _compileContext(context) {
+			for (var option in context.Config.options) {
+				if (context.Config.options.hasOwnProperty(option)) {
+					if (typeof context.Syntax[option] !== 'function') {
+						_SpiderMonkey2.default.print('Invalid option "' + option + '"');
+						_SpiderMonkey2.default.quit(1);
+					}
+
+					context.Compiler.compile(context.Syntax[option]().expressions);
+				}
+			}
+		}
+	}]);
+
+	return Generator;
+}();
+
+exports.default = Generator;
+
+},{"48":48}],48:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @license
+ *
+ * Copyright 2016- Luke Jones (https://github.com/luke-j)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * Provides a facade over the SpiderMonkey global functions/arrays.
+ * If these methods are called outside of the SpiderMonkey shell, they will fail gracefully
+ *
+ * @namespace SpiderMonkey
+ */
+
+var SpiderMonkey = function () {
+	function SpiderMonkey() {
+		_classCallCheck(this, SpiderMonkey);
+	}
+
+	_createClass(SpiderMonkey, null, [{
+		key: 'environment',
+
+
+		/**
+   * Used to access an array of environment variables
+   *
+   * @memberof SpiderMonkey
+   * @static
+   * @returns {Array}
+   */
+		value: function (_environment) {
+			function environment() {
+				return _environment.apply(this, arguments);
+			}
+
+			environment.toString = function () {
+				return _environment.toString();
+			};
+
+			return environment;
+		}(function () {
+			return typeof environment !== 'undefined' ? environment : [];
+		})
+
+		/**
+   * Used to access the arguments passed to the JS shell
+   *
+   * @static
+   * @returns {Array}
+   */
+
+	}, {
+		key: 'scriptArgs',
+		value: function (_scriptArgs) {
+			function scriptArgs() {
+				return _scriptArgs.apply(this, arguments);
+			}
+
+			scriptArgs.toString = function () {
+				return _scriptArgs.toString();
+			};
+
+			return scriptArgs;
+		}(function () {
+			return typeof scriptArgs !== 'undefined' ? scriptArgs : [];
+		})
+
+		/**
+   * Print a message to the console
+   *
+   * @static
+   * @param {String} [message=''] - The message to be printed to the console
+   */
+
+	}, {
+		key: 'print',
+		value: function (_print) {
+			function print() {
+				return _print.apply(this, arguments);
+			}
+
+			print.toString = function () {
+				return _print.toString();
+			};
+
+			return print;
+		}(function () {
+			var message = arguments.length <= 0 || arguments[0] === undefined ? '' : arguments[0];
+
+			typeof print === 'function' && print(message);
+		})
+
+		/**
+   * Read a file and return it's contents
+   *
+   * @static
+   * @param {String} [message=null] - A file path
+   * @returns {Boolean|String} The file contents, or false if unsuccessful
+   */
+
+	}, {
+		key: 'read',
+		value: function (_read) {
+			function read() {
+				return _read.apply(this, arguments);
+			}
+
+			read.toString = function () {
+				return _read.toString();
+			};
+
+			return read;
+		}(function () {
+			var file = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
+
+			return typeof read === 'function' && read(file);
+		})
+
+		/**
+   * Exit the JS shell process
+   *
+   * @static
+   * @param {Integer} [exit=0] - The exit code, non-zero indicating errors
+   */
+
+	}, {
+		key: 'quit',
+		value: function (_quit) {
+			function quit() {
+				return _quit.apply(this, arguments);
+			}
+
+			quit.toString = function () {
+				return _quit.toString();
+			};
+
+			return quit;
+		}(function () {
+			var exit = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
+
+			typeof quit === 'function' && quit(exit);
+
+			if (exit > 0) {
+				throw new Error();
+			}
+		})
+	}]);
+
+	return SpiderMonkey;
+}();
+
+exports.default = SpiderMonkey;
+
+},{}],49:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+var _To = require(50);
+
+var _To2 = _interopRequireDefault(_To);
+
+var _SpiderMonkey = require(48);
+
+var _SpiderMonkey2 = _interopRequireDefault(_SpiderMonkey);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Switch = function () {
+
+	/**
+  * Parse the CLI arguments and run the Switch process
+  *
+  * @constructor Switch
+  */
+
+	function Switch() {
+		_classCallCheck(this, Switch);
+	}
+
+	/**
+  * Parse the CLI arguments and run the command specified by the --command parameter
+  *
+  * @param {Array} scriptArgs - The CLI passed to the JS shell
+  */
+
+
+	_createClass(Switch, null, [{
+		key: 'main',
+		value: function main() {
+			var scriptArgs = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+
+			var args = {};
+			for (var x = 0, length = scriptArgs.length; x < length; x += 2) {
+				args[scriptArgs[x].replace(/^\-{2}/, '')] = scriptArgs[x + 1];
+			}
+
+			if (!args.command) {
+				_SpiderMonkey2.default.print('You must specify a "--command" option');
+				_SpiderMonkey2.default.quit(1);
+			}
+
+			switch (args.command) {
+				case 'to':
+					if (!args.to) {
+						_SpiderMonkey2.default.print('You must specify a "--to" option');
+						_SpiderMonkey2.default.quit(1);
+					} else if (!args.config) {
+						_SpiderMonkey2.default.print('You must specify a "--config" option');
+						_SpiderMonkey2.default.quit(1);
+					}
+					// SWITCH_SOURCE refers to the Switch source directory
+					var run = new _To2.default(args.to, _SpiderMonkey2.default.read(args.config), _SpiderMonkey2.default.environment()['SWITCH_SOURCE']).generate();
+					_SpiderMonkey2.default.print(run);
+					_SpiderMonkey2.default.quit();
+					break;
+				default:
+					_SpiderMonkey2.default.print('Invalid command');
+					_SpiderMonkey2.default.quit(1);
+					break;
+			}
+		}
+	}]);
+
+	return Switch;
+}();
+
+// only execute main() if in the SpiderMonkey environment, version is a SpiderMonkey global function
+
+
+exports.default = Switch;
+typeof version === 'function' && Switch.main(_SpiderMonkey2.default.scriptArgs());
+
+},{"48":48,"50":50}],50:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+var _SpiderMonkey = require(48);
+
+var _SpiderMonkey2 = _interopRequireDefault(_SpiderMonkey);
+
+var _Generator = require(47);
+
+var _Generator2 = _interopRequireDefault(_Generator);
+
+var _Config = require(46);
+
+var _Config2 = _interopRequireDefault(_Config);
+
+var _handlebars = require(32);
+
+var _handlebars2 = _interopRequireDefault(_handlebars);
+
+var _NginxContext = require(58);
+
+var _NginxContext2 = _interopRequireDefault(_NginxContext);
+
+var _NginxCompiler = require(54);
+
+var _NginxCompiler2 = _interopRequireDefault(_NginxCompiler);
+
+var _NginxSyntax = require(60);
+
+var _NginxSyntax2 = _interopRequireDefault(_NginxSyntax);
+
+var _ApacheContext = require(56);
+
+var _ApacheContext2 = _interopRequireDefault(_ApacheContext);
+
+var _ApacheCompiler = require(52);
+
+var _ApacheCompiler2 = _interopRequireDefault(_ApacheCompiler);
+
+var _ApacheSyntax = require(59);
+
+var _ApacheSyntax2 = _interopRequireDefault(_ApacheSyntax);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var To = function () {
+
+	/**
+  * Handles actions required to perform the "to" command
+  *
+  * @constructor
+  * @param {String} use - The server software to use, ie. nginx
+  * @param {String} config - A JSON string read from the config file
+  * @param {String} source - The Switch source directory
+  */
+
+	function To(use, config, source) {
+		_classCallCheck(this, To);
+
+		this._use = use.toLowerCase();
+		this._config = config && JSON.parse(config);
+		this._source = source;
+		this._output = '';
+	}
+
+	/**
+  * Iterates over server names and delegates their config options to be built into apache or nginx conf strings
+  *
+  * @returns {String}
+  */
+
+
+	_createClass(To, [{
+		key: 'generate',
+		value: function generate() {
+			var header = '# Automatically generated by Switch - ' + new Date().toUTCString() + '\n\n';
+
+			for (var server in this._config) {
+				if (this._config.hasOwnProperty(server)) {
+					this._buildConf(server);
+				}
+			}
+
+			return header + this._output;
+		}
+
+		/**
+   * Builds a config instance and passes the necessary dependencies to the Generator instance to be parsed and compiled into conf
+   *
+   * @param {String} server
+   * @private
+   */
+
+	}, {
+		key: '_buildConf',
+		value: function _buildConf(server) {
+			var config = new _Config2.default(this._use, server, this._config[server]);
+			var builder = void 0;
+
+			switch (this._use) {
+				case 'nginx':
+					builder = new _Generator2.default(config, _NginxContext2.default, _NginxCompiler2.default, _NginxSyntax2.default, _handlebars2.default, _SpiderMonkey2.default.read(this._source + 'src/templates/nginx.hbs')).build();
+					break;
+				case 'apache':
+					builder = new _Generator2.default(config, _ApacheContext2.default, _ApacheCompiler2.default, _ApacheSyntax2.default, _handlebars2.default, _SpiderMonkey2.default.read(this._source + 'src/templates/apache.hbs')).build();
+					break;
+				default:
+					throw new Error('Invalid "use" parameter ' + this._use);
+			}
+
+			this._output += builder.output();
+		}
+	}]);
+
+	return To;
+}();
+
+exports.default = To;
+
+},{"32":32,"46":46,"47":47,"48":48,"52":52,"54":54,"56":56,"58":58,"59":59,"60":60}],51:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _CompilerInterface2 = require(53);
+
+var _CompilerInterface3 = _interopRequireDefault(_CompilerInterface2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var AbstractCompiler = function (_CompilerInterface) {
+	_inherits(AbstractCompiler, _CompilerInterface);
+
+	/**
+  * The Compiler is responsible for turning syntax expressions into apache or nginx conf
+  *
+  * @implements CompilerInterface
+  * @param {ApacheContext|NginxContext} Context - A Apache/Nginx Context instance
+  */
+
+	function AbstractCompiler(Context) {
+		_classCallCheck(this, AbstractCompiler);
+
+		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AbstractCompiler).call(this));
+
+		_this._Context = Context;
+		return _this;
+	}
+
+	/**
+  * @inheritdoc
+  */
+
+
+	_createClass(AbstractCompiler, [{
+		key: 'compile',
+		value: function compile(expressions) {
+			expressions.forEach(this._compileEach.bind(this));
+		}
+
+		/**
+   * Compile an assignment expression, ie. an expression assigning a value to an identifier
+   *
+   * @param {Object} expression - A syntax expression
+   * @protected
+   */
+
+	}, {
+		key: '_assignmentExpression',
+		value: function _assignmentExpression(expression) {
+			if (!expression.hasOwnProperty('left') || !expression.hasOwnProperty('right')) {
+				throw new Error('Assignment expression must have a left and right-side value');
+			}
+
+			this._expression(expression.left);
+			this._expression(expression.right);
+		}
+
+		/**
+   * Compile an identifier, ie. a known word to apache or nginx, like DocumentRoot or server_name
+   *
+   * @param {Object} expression - A syntax expression
+   * @protected
+   */
+
+	}, {
+		key: '_identifier',
+		value: function _identifier(expression) {
+			if (!expression.hasOwnProperty('value')) {
+				throw new Error('Identifier must have a value');
+			}
+
+			this._line += expression.value + ' ';
+
+			expression.right && this._expression(expression.right);
+		}
+
+		/**
+   * Compile a literal, which can be any string
+   *
+   * @param {Object} expression - A syntax expression
+   * @protected
+   */
+
+	}, {
+		key: '_literal',
+		value: function _literal(expression) {
+			if (!expression.hasOwnProperty('value')) {
+				throw new Error('Literal must have a value');
+			}
+
+			this._line += expression.value + ' ';
+
+			expression.right && this._expression(expression.right);
+		}
+
+		/**
+   * Compile a variable, which is a pre-determined apache variable which holds a computed value
+   *
+   * @param {Object} expression - A syntax expression
+   * @protected
+   */
+
+	}, {
+		key: '_variable',
+		value: function _variable(expression) {
+			if (!expression.hasOwnProperty('value')) {
+				throw new Error('Literal must have a value');
+			}
+
+			this._line += expression.value + ' ';
+
+			expression.right && this._expression(expression.right);
+		}
+
+		/**
+   * Transforms expressions into apache/nginx conf
+   *
+   * @param {Object} expression - A syntax expression to be parsed
+   * @private
+   */
+
+	}, {
+		key: '_compileEach',
+		value: function _compileEach(expression) {
+			this._line = '';
+			this._expression(expression);
+			if (this._line) {
+				this._Context.lines.push(this._line.trim());
+			}
+		}
+	}]);
+
+	return AbstractCompiler;
+}(_CompilerInterface3.default);
+
+exports.default = AbstractCompiler;
+
+},{"53":53}],52:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _AbstractCompiler2 = require(51);
+
+var _AbstractCompiler3 = _interopRequireDefault(_AbstractCompiler2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var ApacheCompiler = function (_AbstractCompiler) {
+	_inherits(ApacheCompiler, _AbstractCompiler);
+
+	/**
+  * Compilations required specifically for apache conf
+  *
+  * @implements CompilerInterface
+  * @extends AbstractCompiler
+  * @param {ApacheContext|NginxContext} Context - An Apache/Nginx Context object
+  */
+
+	function ApacheCompiler(Context) {
+		_classCallCheck(this, ApacheCompiler);
+
+		return _possibleConstructorReturn(this, Object.getPrototypeOf(ApacheCompiler).call(this, Context));
+	}
+
+	/**
+  * Parse and compile a single syntax expression into apache conf
+  *
+  * @abstract
+  * @protected
+  * @param {Object} expression - A single syntax expression to compile
+  * @returns {string}
+  */
+
+
+	_createClass(ApacheCompiler, [{
+		key: '_expression',
+		value: function _expression(expression) {
+			if (!expression.hasOwnProperty('type')) {
+				throw new Error('Expression must have a type');
+			}
+
+			switch (expression.type) {
+				case 'AssignmentExpression':
+					this._assignmentExpression(expression);
+					break;
+				case 'Identifier':
+					this._identifier(expression);
+					break;
+				case 'Literal':
+					this._literal(expression);
+					break;
+				case 'LocationBlock':
+					this._generateBlockStatement(expression);
+					break;
+				case 'LocationMatchBlock':
+					this._generateBlockStatement(expression, 'LocationMatch');
+					break;
+				case 'ProxyBlock':
+					this._generateBlockStatement(expression, 'Proxy');
+					break;
+				case 'DirectoryBlock':
+					this._generateBlockStatement(expression, 'Directory');
+					break;
+				case 'Variable':
+					this._variable(expression);
+					break;
+				default:
+					break;
+			}
+
+			return this._line;
+		}
+
+		/**
+   * Compile a Block Statement, like a Location block
+   *
+   * @param {Object} expression - A syntax expression
+   * @param {String} type - The type of context being created, ie. Location, Directory, etc.
+   * @protected
+   */
+
+	}, {
+		key: '_generateBlockStatement',
+		value: function _generateBlockStatement(expression, type) {
+			if (!expression.hasOwnProperty('directive') || !expression.hasOwnProperty('body')) {
+				throw new Error('Directory block requires a directive and a body');
+			}
+
+			var childContext = this._Context.addContext(expression.directive, type),
+			    compiler = new ApacheCompiler(childContext);
+
+			compiler.compile(expression.body.expressions);
+		}
+	}]);
+
+	return ApacheCompiler;
+}(_AbstractCompiler3.default);
+
+exports.default = ApacheCompiler;
+
+},{"51":51}],53:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @license
+ *
+ * Copyright 2016- Luke Jones (https://github.com/luke-j)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+var CompilerInterface = function () {
+
+  /**
+   * Each compiler for each server must implement this interface
+   *
+   * @interface
+   */
+
+  function CompilerInterface() {
+    _classCallCheck(this, CompilerInterface);
+  }
+
+  /**
+   * Transforms expressions into apache/nginx conf
+   *
+   * @abstract
+   * @param {Array} expressions - An array of syntax expressions
+   */
+
+
+  _createClass(CompilerInterface, [{
+    key: "compile",
+    value: function compile(expressions) {// eslint-disable-line no-unused-vars
+    }
+  }]);
+
+  return CompilerInterface;
+}();
+
+exports.default = CompilerInterface;
+
+},{}],54:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _AbstractCompiler2 = require(51);
+
+var _AbstractCompiler3 = _interopRequireDefault(_AbstractCompiler2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var NginxCompiler = function (_AbstractCompiler) {
+	_inherits(NginxCompiler, _AbstractCompiler);
+
+	/**
+  * Compilations required specifically for nginx conf
+  *
+  * @implements CompilerInterface
+  * @extends AbstractCompiler
+  * @param {ApacheContext|NginxContext} Context - A Apache/Nginx Context instance
+  */
+
+	function NginxCompiler(Context) {
+		_classCallCheck(this, NginxCompiler);
+
+		return _possibleConstructorReturn(this, Object.getPrototypeOf(NginxCompiler).call(this, Context));
+	}
+
+	/**
+  * Parse and compile a single syntax expression into nginx conf
+  *
+  * @abstract
+  * @protected
+  * @param {Object} expression - A single syntax expression to compile
+  * @returns {string}
+  */
+
+
+	_createClass(NginxCompiler, [{
+		key: '_expression',
+		value: function _expression(expression) {
+			if (!expression.hasOwnProperty('type')) {
+				throw new Error('Expression must have a type');
+			}
+
+			switch (expression.type) {
+				case 'AssignmentExpression':
+					this._assignmentExpression(expression);
+					break;
+				case 'Identifier':
+					this._identifier(expression);
+					break;
+				case 'Literal':
+					this._literal(expression);
+					break;
+				case 'LocationBlock':
+					this._generateBlockStatement(expression);
+					break;
+				case 'Include':
+					this._include(expression);
+					break;
+				case 'Variable':
+					this._variable(expression);
+					break;
+				default:
+					break;
+			}
+
+			return this._line;
+		}
+
+		/**
+   * Compile a Block Statement, like a location block
+   *
+   * @param {Object} expression - A syntax expression
+   * @param {String} type - The type of context being created, ie. location
+   * @protected
+   */
+
+	}, {
+		key: '_generateBlockStatement',
+		value: function _generateBlockStatement(expression, type) {
+			if (!expression.hasOwnProperty('directive') || !expression.hasOwnProperty('body')) {
+				throw new Error('Directory block requires a directive and a body');
+			}
+
+			var childContext = this._Context.addContext(expression.directive, type),
+			    compiler = new NginxCompiler(childContext);
+
+			compiler.compile(expression.body.expressions);
+		}
+
+		/**
+   * Compile a directive to include another file
+   *
+   * @param {Object} expression - A syntax expression
+   * @protected
+   */
+
+	}, {
+		key: '_include',
+		value: function _include(expression) {
+			if (!expression.hasOwnProperty('file')) {
+				throw new Error('Include requires a parameter');
+			}
+
+			this._line += 'include ' + expression.file;
+		}
+	}]);
+
+	return NginxCompiler;
+}(_AbstractCompiler3.default);
+
+exports.default = NginxCompiler;
+
+},{"51":51}],55:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _ContextInterface2 = require(57);
+
+var _ContextInterface3 = _interopRequireDefault(_ContextInterface2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var AbstractContext = function (_ContextInterface) {
+	_inherits(AbstractContext, _ContextInterface);
+
+	/**
+  * Context holds all the information about particular block: it's <i>directive</i>, it's lines, it's child contexts,
+  * as well as it's syntax and compiler instances.
+  *
+  * @implements ContextInterface
+  * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
+  * @param {String} type - The block type, ie. location, Location, Directory, etc.
+  * @property {Config} Config - A config instance
+  * @property {ApacheSyntax|NginxSyntax} Syntax - An apache/nginx Syntax instance
+  * @property {ApacheCompiler|NginxCompiler} Compiler - An apache/nginx Compiler instance
+  */
+
+	function AbstractContext(directive, type) {
+		_classCallCheck(this, AbstractContext);
+
+		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AbstractContext).call(this));
+
+		_this.directive = directive;
+		_this.type = type;
+		_this.contexts = [];
+		_this.lines = [];
+		_this.Config;
+		_this.Syntax;
+		_this.Compiler;
+		return _this;
+	}
+
+	return AbstractContext;
+}(_ContextInterface3.default);
+
+exports.default = AbstractContext;
+
+},{"57":57}],56:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _AbstractContext2 = require(55);
+
+var _AbstractContext3 = _interopRequireDefault(_AbstractContext2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var ApacheContext = function (_AbstractContext) {
+	_inherits(ApacheContext, _AbstractContext);
+
+	/**
+  * Holds the information specifically for apache instances
+  *
+  * @implements ContextInterface
+  * @extends AbstractContext
+  * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
+  * @param {String} [type=Location] - The block type, ie. location, Location, Directory, etc.
+  */
+
+	function ApacheContext() {
+		var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
+		var type = arguments.length <= 1 || arguments[1] === undefined ? 'Location' : arguments[1];
+
+		_classCallCheck(this, ApacheContext);
+
+		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(ApacheContext).call(this, directive, type));
+
+		if (['Location', 'LocationMatch', 'Directory', 'Proxy'].indexOf(type) === -1) {
+			throw new Error('Invalid context type "' + type + '"');
+		}
+		return _this;
+	}
+
+	/**
+  * @inheritdoc
+  */
+
+
+	_createClass(ApacheContext, [{
+		key: 'addContext',
+		value: function addContext() {
+			var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
+			var type = arguments.length <= 1 || arguments[1] === undefined ? 'Location' : arguments[1];
+
+			var context = new ApacheContext(directive, type);
+			this.contexts.push(context);
+
+			return context;
+		}
+	}]);
+
+	return ApacheContext;
+}(_AbstractContext3.default);
+
+exports.default = ApacheContext;
+
+},{"55":55}],57:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @license
+ *
+ * Copyright 2016- Luke Jones (https://github.com/luke-j)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+var ContextInterface = function () {
+
+  /**
+   * Each server context must implement this interface
+   *
+   * @interface
+   */
+
+  function ContextInterface() {
+    _classCallCheck(this, ContextInterface);
+  }
+
+  /**
+   * Adds a child context to the (current) parent context
+   *
+   * @abstract
+   * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
+   * @param {String} type - The block type, ie. location, Location, Directory, etc.
+   */
+
+
+  _createClass(ContextInterface, [{
+    key: "addContext",
+    value: function addContext(directive, type) {// eslint-disable-line no-unused-vars
+    }
+  }]);
+
+  return ContextInterface;
+}();
+
+exports.default = ContextInterface;
+
+},{}],58:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _AbstractContext2 = require(55);
+
+var _AbstractContext3 = _interopRequireDefault(_AbstractContext2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var NginxContext = function (_AbstractContext) {
+	_inherits(NginxContext, _AbstractContext);
+
+	/**
+  * Holds the information specifically for nginx instances
+  *
+  * @implements ContextInterface
+  * @extends AbstractContext
+  * @param {String} directive - The directive to put after the block type, ie. location /some/path, or <Location /some/path>
+  * @param {String} [type=location] - The block type, ie. location, Location, Directory, etc.
+  */
+
+	function NginxContext() {
+		var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
+		var type = arguments.length <= 1 || arguments[1] === undefined ? 'location' : arguments[1];
+
+		_classCallCheck(this, NginxContext);
+
+		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(NginxContext).call(this, directive, type));
+
+		if (type !== 'location') {
+			throw new Error('Invalid context type "' + type + '"');
+		}
+		return _this;
+	}
+
+	/**
+  * @inheritdoc
+  */
+
+
+	_createClass(NginxContext, [{
+		key: 'addContext',
+		value: function addContext() {
+			var directive = arguments.length <= 0 || arguments[0] === undefined ? null : arguments[0];
+			var type = arguments.length <= 1 || arguments[1] === undefined ? 'location' : arguments[1];
+
+			var context = new NginxContext(directive, type);
+			this.contexts.push(context);
+
+			return context;
+		}
+	}]);
+
+	return NginxContext;
+}(_AbstractContext3.default);
+
+exports.default = NginxContext;
+
+},{"55":55}],59:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _SyntaxInterface2 = require(61);
+
+var _SyntaxInterface3 = _interopRequireDefault(_SyntaxInterface2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var ApacheSyntax = function (_SyntaxInterface) {
+	_inherits(ApacheSyntax, _SyntaxInterface);
+
+	/**
+  * Defines syntax required specifically for Apache conf directives
+  *
+  * @implements SyntaxInterface
+  * @param {ApacheContext|NginxContext} Context
+  */
+
+	function ApacheSyntax(Context) {
+		_classCallCheck(this, ApacheSyntax);
+
+		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(ApacheSyntax).call(this));
+
+		_this._config = Context.Config.options;
+		return _this;
+	}
+
+	/**
+  *  @inheritdoc
+  */
+
+
+	_createClass(ApacheSyntax, [{
+		key: 'name',
+		value: function name() {
+			return {
+				expressions: [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'ServerName'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.name
+					}
+				}]
+			};
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'aliases',
+		value: function aliases() {
+			var expression = {
+				expressions: []
+			};
+
+			(this._config.aliases || []).forEach(function (alias) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'ServerAlias'
+					},
+					right: {
+						type: 'Literal',
+						value: alias
+					}
+				});
+			});
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'port',
+		value: function port() {
+			return {
+				expressions: []
+			};
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'ssl',
+		value: function ssl() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.ssl.enable) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'SSLEngine'
+					},
+					right: {
+						type: 'Literal',
+						value: 'On'
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'SSLCertificateFile'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.ssl.cert
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'SSLCertificateKeyFile'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.ssl.key
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'accessLog',
+		value: function accessLog() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.accessLog) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'CustomLog'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.accessLog,
+						right: {
+							type: 'Literal',
+							value: 'combined'
+						}
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'errorLog',
+		value: function errorLog() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.errorLog) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'ErrorLog'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.errorLog
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'root',
+		value: function root() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.root) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'DocumentRoot'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.root
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'fastcgi',
+		value: function fastcgi() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.fastcgi) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'AddHandler'
+					},
+					right: {
+						type: 'Literal',
+						value: 'php5-fcgi',
+						right: {
+							type: 'Literal',
+							value: '.php'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'Action'
+					},
+					right: {
+						type: 'Literal',
+						value: 'php5-fcgi',
+						right: {
+							type: 'Literal',
+							value: '/php5-fcgi'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'Alias'
+					},
+					right: {
+						type: 'Literal',
+						value: '/php5-fcgi',
+						right: {
+							type: 'Literal',
+							value: '/usr/lib/cgi-bin/php5-fcgi'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'FastCgiExternalServer'
+					},
+					right: {
+						type: 'Literal',
+						value: '/usr/lib/cgi-bin/php5-fcgi',
+						right: {
+							type: 'Literal',
+							value: '-host',
+							right: {
+								type: 'Literal',
+								value: '127.0.0.1:9000',
+								right: {
+									type: 'Literal',
+									value: '-pass-header',
+									right: {
+										type: 'Literal',
+										value: 'Authorization'
+									}
+								}
+							}
+						}
+					}
+				}, {
+					type: 'DirectoryBlock',
+					directive: '/usr/lib/cgi-bin',
+					body: {
+						expressions: [{
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'Require'
+							},
+							right: {
+								type: 'Literal',
+								value: 'all',
+								right: {
+									type: 'Literal',
+									value: 'granted'
+								}
+							}
+						}]
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'compress',
+		value: function compress() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.compress.enable) {
+				this._config.compress.types.forEach(function (type) {
+					expression.expressions.push({
+						type: 'AssignmentExpression',
+						left: {
+							type: 'Identifier',
+							value: 'AddOutputFilterByType'
+						},
+						right: {
+							type: 'Literal',
+							value: 'DEFLATE',
+							right: {
+								type: 'Literal',
+								value: type
+							}
+						}
+					});
+				});
+
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'Header'
+					},
+					right: {
+						type: 'Literal',
+						value: 'set',
+						right: {
+							type: 'Literal',
+							value: 'Vary',
+							right: {
+								type: 'Literal',
+								value: '*'
+							}
+						}
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'headers',
+		value: function headers() {
+			var expression = {
+				expressions: []
+			};
+
+			for (var header in this._config.headers.set) {
+				if (this._config.headers.set.hasOwnProperty(header)) {
+					expression.expressions.push({
+						type: 'AssignmentExpression',
+						left: {
+							type: 'Identifier',
+							value: 'Header'
+						},
+						right: {
+							type: 'Literal',
+							value: 'set',
+							right: {
+								type: 'Literal',
+								value: header,
+								right: {
+									type: 'Literal',
+									value: '"' + this._config.headers.set[header] + '"'
+								}
+							}
+						}
+					});
+				}
+			}
+
+			if (this._config.headers.unset) {
+				this._config.headers.unset.forEach(function (header) {
+					expression.expressions.push({
+						type: 'AssignmentExpression',
+						left: {
+							type: 'Identifier',
+							value: 'Header'
+						},
+						right: {
+							type: 'Literal',
+							value: 'unset',
+							right: {
+								type: 'Literal',
+								value: header
+							}
+						}
+					});
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'serverSignature',
+		value: function serverSignature() {
+			return {
+				expressions: [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'ServerSignature'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.serverSignature ? 'On' : 'Off'
+					}
+				}]
+			};
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'index',
+		value: function index() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.index.length) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'DirectoryIndex'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.index.join(' ')
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'redirect',
+		value: function redirect() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.redirect.enable) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'RedirectMatch'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.redirect.permanent ? '301' : '302',
+						right: {
+							type: 'Literal',
+							value: '^(.*)$',
+							right: {
+								type: 'Literal',
+								value: this._config.redirect.to
+							}
+						}
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'listDirectories',
+		value: function listDirectories() {
+			return {
+				expressions: [{
+					type: 'LocationBlock',
+					directive: '/',
+					body: {
+						expressions: [{
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'Options'
+							},
+							right: {
+								type: 'Literal',
+								value: this._config.listDirectories ? '+Indexes' : '-Indexes',
+								right: {
+									type: 'Literal',
+									value: '+FollowSymLinks'
+								}
+							}
+						}]
+					}
+				}]
+			};
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'caching',
+		value: function caching() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.caching.enable) {
+				expression.expressions = [{
+					type: 'LocationMatchBlock',
+					directive: '".(' + this._config.caching.types.join('|') + ')$"',
+					body: {
+						expressions: [{
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'ExpiresActive'
+							},
+							right: {
+								type: 'Literal',
+								value: 'On'
+							}
+						}, {
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'ExpiresDefault'
+							},
+							right: {
+								type: 'Literal',
+								value: ('"access plus\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.years + ' years\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.months + ' months\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.weeks + ' weeks\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.days + ' days\n\t\t\t\t\t\t\t\t\t\t\t' + this._config.caching.expires.minutes + ' minutes"').replace(/\n/g, '')
+							}
+						}]
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'auth',
+		value: function auth() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.auth.enable) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'AuthType'
+					},
+					right: {
+						type: 'Literal',
+						value: 'Basic'
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'AuthName'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.auth.message
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'AuthUserFile'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.auth.userFile
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'Require'
+					},
+					right: {
+						type: 'Literal',
+						value: 'valid-user'
+					}
+				}];
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'proxy',
+		value: function proxy() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.proxy.enable) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'ProxyRequests'
+					},
+					right: {
+						type: 'Literal',
+						value: 'Off'
+					}
+				}, {
+					type: 'ProxyBlock',
+					directive: '*',
+					body: {
+						expressions: [{
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Literal',
+								value: 'Order'
+							},
+							right: {
+								type: 'Literal',
+								value: 'deny,allow'
+							}
+						}]
+					}
+				}, {
+					type: 'LocationBlock',
+					directive: '/',
+					body: {
+						expressions: [{
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'ProxyPass'
+							},
+							right: {
+								type: 'Literal',
+								value: this._config.proxy.to
+							}
+						}, {
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'ProxyPassReverse'
+							},
+							right: {
+								type: 'Literal',
+								value: this._config.proxy.to
+							}
+						}]
+					}
+				}];
+			}
+
+			return expression;
+		}
+	}]);
+
+	return ApacheSyntax;
+}(_SyntaxInterface3.default);
+
+exports.default = ApacheSyntax;
+
+},{"61":61}],60:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _SyntaxInterface2 = require(61);
+
+var _SyntaxInterface3 = _interopRequireDefault(_SyntaxInterface2);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * @license
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Copyright 2016- Luke Jones (https://github.com/luke-j)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Licensed under the Apache License, Version 2.0 (the "License");
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * you may not use this file except in compliance with the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * You may obtain a copy of the License at
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * http://www.apache.org/licenses/LICENSE-2.0
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Unless required by applicable law or agreed to in writing, software
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * distributed under the License is distributed on an "AS IS" BASIS,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * See the License for the specific language governing permissions and
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * limitations under the License.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+var NginxSyntax = function (_SyntaxInterface) {
+	_inherits(NginxSyntax, _SyntaxInterface);
+
+	/**
+  * Defines syntax required specifically for Nginx conf directives
+  *
+  * @implements SyntaxInterface
+  * @param {ApacheContext|NginxContext} Context
+  */
+
+	function NginxSyntax(Context) {
+		_classCallCheck(this, NginxSyntax);
+
+		var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(NginxSyntax).call(this));
+
+		_this._config = Context.Config.options;
+		return _this;
+	}
+
+	/**
+  *  @inheritdoc
+  */
+
+
+	_createClass(NginxSyntax, [{
+		key: 'name',
+		value: function name() {
+			return {
+				expressions: [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'server_name'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.name,
+						right: {
+							type: 'Literal',
+							value: this._config.aliases && this._config.aliases.join(' ')
+						}
+					}
+				}]
+			};
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'aliases',
+		value: function aliases() {
+			return {
+				expressions: []
+			};
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'port',
+		value: function port() {
+			var expression = {
+				expressions: [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'listen'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.port
+					}
+				}]
+			};
+
+			if (this._config.ssl.enable) {
+				expression.expressions[0].right.right = {
+					type: 'Literal',
+					value: 'ssl'
+				};
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'ssl',
+		value: function ssl() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.ssl.enable) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'ssl_certificate'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.ssl.cert
+					}
+				});
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'ssl_certificate_key'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.ssl.key
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'accessLog',
+		value: function accessLog() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.accessLog !== null) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'access_log'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.accessLog
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'errorLog',
+		value: function errorLog() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.errorLog !== null) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'error_log'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.errorLog
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'root',
+		value: function root() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.root !== null) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'root'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.root
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'fastcgi',
+		value: function fastcgi() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.fastcgi) {
+				expression.expressions.push({
+					type: 'LocationBlock',
+					directive: '~ \.php$',
+					body: {
+						expressions: [{
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'fastcgi_split_path_info'
+							},
+							right: {
+								type: 'Literal',
+								value: '^(.+\.php)(/.+)$'
+							}
+						}, {
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'fastcgi_pass'
+							},
+							right: {
+								type: 'Literal',
+								value: 'unix:/var/run/php5-fpm.sock'
+							}
+						}, {
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'fastcgi_index'
+							},
+							right: {
+								type: 'Literal',
+								value: 'index.php'
+							}
+						}, {
+							type: 'Include',
+							file: 'fastcgi_params'
+						}]
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'compress',
+		value: function compress() {
+			var expression = {
+				expressions: []
+			};
+
+			expression.expressions.push({
+				type: 'AssignmentExpression',
+				left: {
+					type: 'Identifier',
+					value: 'gzip'
+				},
+				right: {
+					type: 'Literal',
+					value: this._config.compress.enable ? 'on' : 'off'
+				}
+			});
+
+			if (this._config.compress.enable) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'gzip_http_version'
+					},
+					right: {
+						type: 'Literal',
+						value: '1.1'
+					}
+				});
+
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'gzip_proxied'
+					},
+					right: {
+						type: 'Literal',
+						value: 'any'
+					}
+				});
+
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'gzip_types'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.compress.types.join(' ')
+					}
+				});
+
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'gzip_vary'
+					},
+					right: {
+						type: 'Literal',
+						value: 'on'
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'headers',
+		value: function headers() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.headers.set !== null) {
+				for (var header in this._config.headers.set) {
+					if (this._config.headers.set.hasOwnProperty(header)) {
+						expression.expressions.push({
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'add_header'
+							},
+							right: {
+								type: 'Literal',
+								value: header,
+								right: {
+									type: 'Literal',
+									value: '"' + this._config.headers.set[header] + '"'
+								}
+							}
+						});
+					}
+				}
+			}
+
+			if (this._config.headers.unset !== null) {
+				this._config.headers.unset.forEach(function (header) {
+					expression.expressions.push({
+						type: 'AssignmentExpression',
+						left: {
+							type: 'Identifier',
+							value: 'add_header'
+						},
+						right: {
+							type: 'Literal',
+							value: header,
+							right: {
+								type: 'Literal',
+								value: '""'
+							}
+						}
+					});
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'serverSignature',
+		value: function serverSignature() {
+			var expression = {
+				expressions: []
+			};
+
+			expression.expressions.push({
+				type: 'AssignmentExpression',
+				left: {
+					type: 'Identifier',
+					value: 'server_tokens'
+				},
+				right: {
+					type: 'Literal',
+					value: this._config.serverSignature ? 'on' : 'off'
+				}
+			});
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'index',
+		value: function index() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.index.length) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'index'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.index.join(' ')
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'redirect',
+		value: function redirect() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.redirect.enable) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'return'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.redirect.permanent ? '301' : '302',
+						right: {
+							type: 'Literal',
+							value: this._config.redirect.to
+						}
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'listDirectories',
+		value: function listDirectories() {
+			return {
+				expressions: [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'autoindex'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.listDirectories ? 'on' : 'off'
+					}
+				}]
+			};
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'caching',
+		value: function caching() {
+			var expression = {
+				expressions: []
+			},
+			    minutesInOneYear = 525600;
+			var expires = 0;
+
+			if (this._config.caching.enable) {
+				expires += this._config.caching.expires.years * minutesInOneYear;
+				expires += this._config.caching.expires.months * minutesInOneYear / 12;
+				expires += this._config.caching.expires.weeks * minutesInOneYear / 52;
+				expires += this._config.caching.expires.days * minutesInOneYear / 365;
+				expires += this._config.caching.expires.minutes;
+
+				expression.expressions.push({
+					type: 'LocationBlock',
+					directive: '~* .(?:' + this._config.caching.types.join('|') + '$',
+					body: {
+						expressions: [{
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'expires'
+							},
+							right: {
+								type: 'Literal',
+								value: expires + 'm'
+							}
+						}, {
+							type: 'AssignmentExpression',
+							left: {
+								type: 'Identifier',
+								value: 'add_header'
+							},
+							right: {
+								type: 'Literal',
+								value: 'Cache-Control',
+								right: {
+									type: 'Literal',
+									value: '"public"'
+								}
+							}
+						}]
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'auth',
+		value: function auth() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.auth.enable) {
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'auth_basic'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.auth.message
+					}
+				});
+
+				expression.expressions.push({
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'auth_basic_user_file'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.auth.userFile
+					}
+				});
+			}
+
+			return expression;
+		}
+
+		/**
+   *  @inheritdoc
+   */
+
+	}, {
+		key: 'proxy',
+		value: function proxy() {
+			var expression = {
+				expressions: []
+			};
+
+			if (this._config.proxy.enable) {
+				expression.expressions = [{
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_pass'
+					},
+					right: {
+						type: 'Literal',
+						value: this._config.proxy.to
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_cache_valid'
+					},
+					right: {
+						type: 'Literal',
+						value: 'any',
+						right: {
+							type: 'Literal',
+							value: '0'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_set_header'
+					},
+					right: {
+						type: 'Literal',
+						value: 'Host',
+						right: {
+							type: 'Variable',
+							value: '$host'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_set_header'
+					},
+					right: {
+						type: 'Literal',
+						value: 'X-Forwarded-Proto',
+						right: {
+							type: 'Variable',
+							value: '$scheme'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_set_header'
+					},
+					right: {
+						type: 'Literal',
+						value: 'X-Forwarded-For',
+						right: {
+							type: 'Variable',
+							value: '$proxy_add_x_forwarded_for'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_set_header'
+					},
+					right: {
+						type: 'Literal',
+						value: 'X-Real-IP',
+						right: {
+							type: 'Variable',
+							value: '$remote_addr'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_http_version'
+					},
+					right: {
+						type: 'Literal',
+						value: '1.1'
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_set_header'
+					},
+					right: {
+						type: 'Literal',
+						value: 'Upgrade',
+						right: {
+							type: 'Variable',
+							value: '$http_upgrade'
+						}
+					}
+				}, {
+					type: 'AssignmentExpression',
+					left: {
+						type: 'Identifier',
+						value: 'proxy_set_header'
+					},
+					right: {
+						type: 'Literal',
+						value: 'Connection',
+						right: {
+							type: 'Literal',
+							value: '"upgrade"'
+						}
+					}
+				}];
+			}
+
+			return expression;
+		}
+	}]);
+
+	return NginxSyntax;
+}(_SyntaxInterface3.default);
+
+exports.default = NginxSyntax;
+
+},{"61":61}],61:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+	value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * @license
+ *
+ * Copyright 2016- Luke Jones (https://github.com/luke-j)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+var SyntaxInterface = function () {
+
+	/**
+  * Each method defines the syntax required to write the directives for a particular config option, for
+  * example, the "DocumentRoot" directive requires an identifier - "DocumentRoot" - followed by a literal
+  * - "/web/root". Each method must define it's syntax requirements to fulfill its config option by writing
+  * these requires as syntax objects to be parsed anc compiled later.
+  * <br><br>
+  * The syntax form concrete-syntax-tree like objects, but aren't strictly CTSs, so they don't follow all
+  * the rules.
+  * <br><br>
+  * Each configuration option must have a method with the same name in this interface, each server type
+  * must implement this interface.
+  *
+  * @interface
+  */
+
+	function SyntaxInterface() {
+		_classCallCheck(this, SyntaxInterface);
+	}
+
+	/**
+  * Syntax corresponding with the options key, being the server name
+  *
+  * @abstract
+  * @returns {Object}
+  */
+
+
+	_createClass(SyntaxInterface, [{
+		key: "name",
+		value: function name() {}
+
+		/**
+   * Syntax corresponding with the "aliases" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "aliases",
+		value: function aliases() {}
+
+		/**
+   * Syntax corresponding with the "port" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "port",
+		value: function port() {}
+
+		/**
+   * Syntax corresponding with the "ssl" options
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "ssl",
+		value: function ssl() {}
+
+		/**
+   * Syntax corresponding with the "accessLog" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "accessLog",
+		value: function accessLog() {}
+
+		/**
+   * Syntax corresponding with the "errorLog" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "errorLog",
+		value: function errorLog() {}
+
+		/**
+   * Syntax corresponding with the "root" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "root",
+		value: function root() {}
+
+		/**
+   * Syntax corresponding with the "fastcgi" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "fastcgi",
+		value: function fastcgi() {}
+
+		/**
+   * Syntax corresponding with the "compress" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "compress",
+		value: function compress() {}
+
+		/**
+   * Syntax corresponding with the "headers.set" and "header.unset" options
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "headers",
+		value: function headers() {}
+
+		/**
+   * Syntax corresponding with the "serverSignature" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "serverSignature",
+		value: function serverSignature() {}
+
+		/**
+   * Syntax corresponding with the "index" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "index",
+		value: function index() {}
+
+		/**
+   * Syntax corresponding with the "redirect" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "redirect",
+		value: function redirect() {}
+
+		/**
+   * Syntax corresponding with the "listDirectories" option
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "listDirectories",
+		value: function listDirectories() {}
+
+		/**
+   * Syntax corresponding with the "caching" options
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "caching",
+		value: function caching() {}
+
+		/**
+   * Syntax corresponding with the "auto" options
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "auth",
+		value: function auth() {}
+
+		/**
+   * Syntax corresponding with the "proxy" options
+   *
+   * @abstract
+   * @returns {Object}
+   */
+
+	}, {
+		key: "proxy",
+		value: function proxy() {}
+	}]);
+
+	return SyntaxInterface;
+}();
+
+exports.default = SyntaxInterface;
+
+},{}]},{},[49])
 
 
 //# sourceMappingURL=build.js.map

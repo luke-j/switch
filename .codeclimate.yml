@@ -7,7 +7,7 @@ engines:
     enabled: false
 ratings:
   paths:
-  - "lib/**"
+  - "src/**"
 exclude_paths:
   - "docs/**"
   - "dist/**"

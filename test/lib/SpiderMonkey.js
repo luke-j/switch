@@ -1,4 +1,4 @@
-import SpiderMonkey from '../../lib/SpiderMonkey';
+import SpiderMonkey from '../../src/SpiderMonkey';
 
 describe('SpiderMonkey globals', () => {
 	it('should expose the "print" method', () => {

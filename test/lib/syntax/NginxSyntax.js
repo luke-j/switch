@@ -1,5 +1,5 @@
-import Config from '../../../lib/Config';
-import NginxSyntax from '../../../lib/syntax/NginxSyntax';
+import Config from '../../../src/Config';
+import NginxSyntax from '../../../src/syntax/NginxSyntax';
 
 describe('NginxSyntax', () => {
 	let config, syntax, conf;
