@@ -3,11 +3,11 @@ node_js:
   - "5"
 addons:
   code_climate:
-	repo_token: 2ce826c37bb76ebdf44bd69fa7c4027110ee02ae53ac60975e57bfe52035abff
+    repo_token: 2ce826c37bb76ebdf44bd69fa7c4027110ee02ae53ac60975e57bfe52035abff
 before_script:
   - npm install -g codeclimate-test-reporter
 after_script:
   - codeclimate-test-reporter < coverage/lcov.info
 cache:
   directories:
-	- node_modules
+    - node_modules
