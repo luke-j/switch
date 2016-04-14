@@ -1,0 +1,15 @@
+<VirtualHost {{context.directive}}>
+    {{#each context.lines}}
+        {{this}}
+    {{/each}}
+
+    {{#each context.contexts}}
+        <{{this.type}} {{this.directive}}>
+            {{#each this.lines}}
+                {{this}}
+            {{/each}}
+        </{{this.type}}>
+
+    {{/each}}
+</VirtualHost>
+
