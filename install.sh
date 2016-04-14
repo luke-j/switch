@@ -51,7 +51,6 @@ get_profile() {
 download() {
     local source
     local profile
-    local exists
     source="[[ -e ${SWITCH_SOURCE}/switch ]] && . ${SWITCH_SOURCE}/switch"
     profile=$(get_profile)
 
