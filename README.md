@@ -2,6 +2,7 @@ Switch
 =========
 [![Build Status](https://travis-ci.org/luke-j/switch.svg?branch=master)](https://travis-ci.org/luke-j/switch)
 [![Test Coverage](https://codeclimate.com/github/luke-j/switch/badges/coverage.svg)](https://codeclimate.com/github/luke-j/switch/coverage)
+[![Code Climate](https://codeclimate.com/github/luke-j/switch/badges/gpa.svg)](https://codeclimate.com/github/luke-j/switch)
 
 Switch is a language agnostic CLI that allows you to write apache or nginx conf as JSON and switch between the two seamlessly.
 
