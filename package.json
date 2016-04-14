@@ -5,7 +5,7 @@
 	"main": "gulpfile.babel.js",
 	"scripts": {
 		"lint": "gulp lint",
-		"test": "gulp test",
+		"test": "npm run lint && gulp test",
 		"docs": "gulp docs",
 		"compile": "gulp compile",
 		"watch": "gulp watch",
