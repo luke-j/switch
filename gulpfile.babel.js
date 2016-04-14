@@ -73,7 +73,7 @@ gulp.task('pre-test', () => {
 gulp.task('test', ['pre-test'], () => {
 	return gulp.src(paths.tests.main, {read: false})
 		.pipe(mocha({globals: ['environment', 'print', 'quit', 'read', 'scriptArgs']}))
-		.pipe(istanbul.writeReports({reporters: ['html']}))
+		.pipe(istanbul.writeReports({reporters: ['html', 'lcov']}))
 		.pipe(istanbul.enforceThresholds({thresholds: {global: {lines: 90}}}));
 });
 
