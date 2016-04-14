@@ -66,7 +66,7 @@ gulp.task('lint', () => {
 
 gulp.task('pre-test', () => {
 	return gulp.src(paths.lib.files)
-		.pipe(istanbul({instrumenter: Instrumenter, includeUntested: true}))
+		.pipe(istanbul({instrumenter: Instrumenter, includeUntested: false}))
 		.pipe(istanbul.hookRequire());
 });
 
