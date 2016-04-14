@@ -1,0 +1,6 @@
+.vagrant/
+.idea/
+.DS*
+node_modules/
+coverage/
+.switchrc

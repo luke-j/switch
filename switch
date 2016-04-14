@@ -1,0 +1,367 @@
+#!/usr/bin/env bash
+
+# Copyright 2016- Luke Jones (https://github.com/Luke-j)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+reset='\033[0m'
+red='\033[0;31m'
+green='\033[0;32m'
+
+CONFIG=
+SOURCE="$HOME/.switch/"
+PRINT=0
+JS=
+TO=
+OUTPUT_FILE=
+MAN="
+Switch
+
+Note: currently supported <app> options are either nginx or apache
+
+Usage:
+  switch help                   Show this message
+  switch to <app>               Build conf file for the <app> specified and start the <app> service, cathing any <app> errors
+    --config <file>             Config file to used to generate conf file. Default: <current directory>/.switchrc
+    --out <file>                Output file. Default: /etc/nginx/sites-enabled/switch.conf, /etc/apache2/sites-enabled/switch.conf
+    --source <file>             The Switch source directory, for current directory, use a period. Default: ~/.switch
+    --print                     Display the generated conf without writing to the output file
+  switch current                Display <app> currently being used
+
+Example:
+  switch to nginx               Generate nginx.conf and start the nginx service
+  switch to apache --print      Display the generated apache.conf, without writing to file or starting apache
+"
+
+switch_to() {
+    local run
+
+    if [[ "${PRINT}" == 0 ]] ; then
+        switch_is_service_installed || {
+            switch_error "${TO} is not installed, use the --print option to just display generated output"
+            return 1
+        }
+    fi
+
+    switch_check_config_file_exists || {
+        switch_error "Config file not found, you can specify it manually with the --config option"
+        return 1
+    }
+
+    if [[ ! -e "${SOURCE}" ]] ; then
+        switch_error "Cannot find the source directory for Switch, you can specify it manually with the --source option"
+        return 1
+    fi
+
+    if [[ ! -e "${SOURCE}dist/build.js" ]] ; then
+        switch_error "Cannot find the Switch executable"
+        return 1
+    fi
+
+    run=$("${JS}" "${SOURCE}"dist/build.js --command to --to "${TO}" --config "${CONFIG}")
+    if [[ $? != 0 ]] ; then
+        switch_error "$run"
+        return 1
+    fi
+
+    if [[ "${PRINT}" == 1 ]] ; then
+        echo "$run"
+    else
+        switch_check_output_directory_is_writable || {
+            switch_error "No write permission on output directory \"$(dirname ${OUTPUT_FILE})\""
+            return 1
+        }
+
+        switch_check_output_file || {
+            switch_error "Output file ${OUTPUT_FILE} does not exist or is not writable"
+            return 1
+        }
+
+        echo "${run}" > "${OUTPUT_FILE}"
+
+        if switch_check_config_test ; then
+            switch_restart_services || {
+                switch_error "Failed to restart the ${TO} service";
+                return 1
+            }
+        else
+            return 1
+        fi
+    fi
+
+    return 0
+}
+
+switch_check_config_file_exists() {
+    [[ -e "$CONFIG" ]]
+
+    return $?
+}
+
+switch_is_service_installed() {
+    local service
+    case "$TO" in
+        "nginx") service=nginx ;;
+        "apache") service=apache2 ;;
+    esac
+
+    command -v "${service}" >/dev/null 2>&1
+
+    return $?
+}
+
+
+switch_check_output_directory_is_writable() {
+    local dir
+    dir=$(dirname "${OUTPUT_FILE}")
+
+    [[ -w "$dir" ]]
+
+    return $?
+}
+
+switch_check_output_file() {
+    [[ -e "${OUTPUT_FILE}" && -w "${OUTPUT_FILE}" ]]
+
+    return $?
+}
+
+switch_check_config_test() {
+    local conf_check
+    local parse_error
+
+    if [[ "$TO" == "nginx" ]] ; then
+        conf_check=switch_test_nginx_conf
+        parse_error=switch_parse_nginx_error
+    elif [[ "$TO" == "apache" ]] ; then
+        conf_check=switch_test_apache_conf
+        parse_error=switch_parse_apache_error
+    fi
+
+    if ! ${conf_check} ; then
+        $parse_error
+        return 1
+    fi
+
+    return 0
+}
+
+switch_restart_services() {
+    if [[ "$TO" == "nginx" ]] ; then
+        if switch_is_apache_installed ; then
+            apache2 -k stop > /dev/null 2>&1
+        fi
+
+        nginx > /dev/null 2>&1
+    elif [[ "$TO" == "apache" ]] ; then
+        if switch_is_nginx_installed ; then
+            nginx -s stop > /dev/null 2>&1
+        fi
+
+        apache2 -k restart > /dev/null 2>&1
+    fi
+
+    return $?
+}
+
+switch_is_nginx_installed() {
+    command -v nginx > /dev/null 2>&1
+
+    return $?
+}
+
+switch_is_apache_installed() {
+    command -v apache2 > /dev/null 2>&1
+
+    return $?
+}
+
+switch_test_nginx_conf() {
+    nginx -t &>/dev/null
+
+    return $?
+}
+
+switch_parse_nginx_error() {
+    local errors=()
+    local lines
+    lines=$(nginx -t 2>&1)
+    IFS=$'\n'
+
+    for line in ${lines} ; do
+        errors+=("$(echo "$line" | awk -F'] ' '{print $2}')")
+    done
+
+    if switch_print_conf_errors "${errors[@]}" ; then
+        return 0
+    fi
+}
+
+switch_test_apache_conf() {
+    apachectl -t &>/dev/null
+
+    return $?
+}
+
+switch_parse_apache_error() {
+    local errors=()
+    local lines
+    lines=$(apachectl -t 2>&1)
+    IFS=$'\n'
+
+    for line in ${lines[@]} ; do
+        if [[ "$line" != "Action"* && "$line" != "The Apache error"* ]] ; then
+            errors+=(${line})
+        fi
+    done
+
+    if switch_print_conf_errors "${errors[@]}" ; then
+        return 0
+    fi
+}
+
+switch_print_conf_errors() {
+    errors=$1
+    if [[ "${#errors[@]}" != 0 ]] ; then
+        switch_error "\nCompleted with errors:"
+
+        for error in "${errors[@]}" ; do
+            switch_error " => ${error}"
+        done
+    fi
+
+    return 0
+}
+
+switch_error() {
+    >&2 echo -e "${red}${1}${reset}"
+}
+
+switch_get_currently_using() {
+    local apache
+    local nginx
+    local using
+
+    apache=$(ps aux | grep -i apache2 | wc -l)
+    nginx=$(ps aux | grep -i nginx | wc -l)
+
+    if (( "$apache" > 1 && "$nginx" <= 1 )) ; then
+        using="apache"
+    fi
+
+    if (( "$apache" <= 1 && "$nginx" > 1 )) ; then
+        using="nginx"
+    fi
+
+    if [[ -z "$using" ]] ; then
+        using="nothing"
+    fi
+
+    echo "$using"
+}
+
+switch_js_shell_is_installed() {
+    which js24 &>/dev/null
+    if [[ $? != 0 ]] ; then
+        which js &>/dev/null
+        if [[ $? != 0 ]] ; then
+            return 1
+        fi
+        JS="js"
+    else
+        JS="js24"
+    fi
+
+    return 0
+}
+
+switch_parse_to_options() {
+    export SWITCH_SOURCE=${SOURCE}
+
+    case "${TO}" in
+        "nginx")
+            OUTPUT_FILE="/etc/nginx/sites-enabled/switch.conf"
+        ;;
+        "apache")
+            OUTPUT_FILE="/etc/apache2/sites-enabled/switch.conf"
+        ;;
+        "")
+            switch_error "Please provide a to parameter"
+            return 1
+        ;;
+        *)
+            switch_error "Invalid to parameter \"${TO}\""
+            return 1
+        ;;
+    esac
+
+    while [[ "$#" > 0 ]] ; do
+        key="$1"
+        case "${key}" in
+            --config)
+                CONFIG="$2"
+                shift
+            ;;
+            --out)
+                OUTPUT_FILE="$2"
+                shift
+            ;;
+            --print)
+                PRINT=1
+                shift
+            ;;
+            --source)
+                if [[ "$2" == "." ]] ; then
+                    SOURCE=$(pwd)/
+                else
+                    SOURCE="$2"
+                fi
+                export SWITCH_SOURCE="${SOURCE}"
+                shift
+            ;;
+            *)
+                shift
+            ;;
+        esac
+    done
+
+    return 0
+}
+
+switch() {
+    CONFIG="$(pwd)/.switchrc"
+    case "$1" in
+        "to")
+            TO=$(echo "${2}" | awk '{print tolower($0)}')
+            switch_js_shell_is_installed || {
+                switch_error "The javascript shell is not installed, install with \"apt-get install -y libmozjs-24-bin\" or \"brew install spidermonkey\""
+                return 1
+            }
+
+            if switch_parse_to_options "${@}" && switch_to ; then
+                if [[ "${PRINT}" == 0 ]] ; then
+                    echo -e "${green}Success! Now using ${TO}.${reset}"
+                fi
+            fi
+        ;;
+        "current")
+            echo -e "${green}Currently using: $(switch_get_currently_using)${reset}"
+        ;;
+        "help")
+            echo "${MAN}"
+        ;;
+        ""|*)
+            echo "${MAN}"
+        ;;
+    esac
+}

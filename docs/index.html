@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Switch Index</title>
+
+	<!--[if lt IE 9]>
+	<script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	<link type="text/css" rel="stylesheet" href="styles/sunlight.default.css">
+
+	<link type="text/css" rel="stylesheet" href="styles/site.paper.css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-default navbar-fixed-top ">
+<div class="container">
+	<div class="navbar-header">
+		<a class="navbar-brand" href="index.html">Switch</a>
+		<button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#topNavigation">
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+        </button>
+	</div>
+	<div class="navbar-collapse collapse" id="topNavigation">
+		<ul class="nav navbar-nav">
+			
+			<li class="dropdown">
+				<a href="namespaces.list.html" class="dropdown-toggle" data-toggle="dropdown">Namespaces<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="SpiderMonkey.html">SpiderMonkey</a></li>
+				</ul>
+			</li>
+			
+			<li class="dropdown">
+				<a href="classes.list.html" class="dropdown-toggle" data-toggle="dropdown">Classes<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="AbstractCompiler.html">AbstractCompiler</a></li><li><a href="AbstractContext.html">AbstractContext</a></li><li><a href="ApacheCompiler.html">ApacheCompiler</a></li><li><a href="ApacheContext.html">ApacheContext</a></li><li><a href="ApacheSyntax.html">ApacheSyntax</a></li><li><a href="Config.html">Config</a></li><li><a href="Generator.html">Generator</a></li><li><a href="module.exports.html">module.exports</a></li><li><a href="NginxCompiler.html">NginxCompiler</a></li><li><a href="NginxContext.html">NginxContext</a></li><li><a href="NginxSyntax.html">NginxSyntax</a></li><li><a href="Switch.html">Switch</a></li><li><a href="To.html">To</a></li>
+				</ul>
+			</li>
+			
+			<li class="dropdown">
+				<a href="interfaces.list.html" class="dropdown-toggle" data-toggle="dropdown">Interfaces<b class="caret"></b></a>
+				<ul class="dropdown-menu ">
+					<li><a href="CompilerInterface.html">CompilerInterface</a></li><li><a href="ContextInterface.html">ContextInterface</a></li><li><a href="SyntaxInterface.html">SyntaxInterface</a></li>
+				</ul>
+			</li>
+			
+		</ul>
+		<div class="col-sm-3 col-md-3">
+            <form class="navbar-form" role="search">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Search" name="q" id="search-input">
+                    <div class="input-group-btn">
+                        <button class="btn btn-default" id="search-submit"><i class="glyphicon glyphicon-search"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+	</div>
+
+</div>
+</div>
+
+
+<div class="container" id="toc-content">
+<div class="row">
+
+	
+	<div class="col-md-8">
+	
+		<div id="main">
+			
+
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+
+
+
+
+
+    <section class="readme-section">
+        <article><h1>Switch</h1><p>Switch is a language agnostic CLI that allows you to write apache or nginx conf as JSON and switch between the two seamlessly.</p>
+<h2>Installation</h2><p><strong>Install the SpiderMonkey javascript shell:</strong></p>
+<p>Linux:</p>
+<pre class="prettyprint source lang-bash"><code>apt-get install -y libmozjs-24-bin</code></pre><p>Mac with homebrew:</p>
+<pre class="prettyprint source lang-bash"><code>brew install spidermonkey</code></pre><p><strong>Download Switch:</strong></p>
+<pre class="prettyprint source lang-bash"><code>curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh | bash</code></pre><p><strong>Create your <code>.switchrc</code> config file</strong> (see the example <a href="">here</a>).</p>
+<h2>Usage</h2><p>Once you've created your config file, you can create conf and switch server software via the CLI:</p>
+<pre class="prettyprint source"><code>Switch
+
+Note: currently supported &lt;app> options are either nginx or apache
+
+Usage:
+  switch help                   Show this message
+  switch to &lt;app>               Build conf file for the &lt;app> specified and start the &lt;app> service, cathing any &lt;app> errors
+    --config &lt;file>             Config file to used to generate conf file. Default: &lt;current directory>/.switchrc
+    --out &lt;file>                Output file. Default: /etc/nginx/sites-enabled/switch.conf, /etc/apache2/sites-enabled/switch.conf
+    --source &lt;file>             The Switch source directory, for current directory, use a period. Default: ~/.switch
+    --print                     Display the generated conf without writing to the output file
+  switch current                Display &lt;app> currently being used
+
+Example:
+  switch use nginx              Generate nginx.conf and start the nginx service
+  switch use apache --print     Display the generated apache.conf, without writing to file or starting apache</code></pre><h2><code>.switchrc</code> files</h2><p><code>.switchrc</code> files are just json. Config options are given under a property with the same name as the server.</p>
+<p>For example, if we wanted to create a virtual host for <code>example.com</code>, our <code>.switchrc</code> file would read:</p>
+<pre class="prettyprint source lang-json"><code>{
+    &quot;example.com&quot;: {
+
+    }
+}</code></pre><p>In addition to these options, you can also include &quot;locations&quot; - which are any properties starting with a forward slash. Locations allow you to nest options for particular URL paths.</p>
+<p>For example, if we wanted to compress javascript assets under the url <code>example.com/static/js</code>, we could do:</p>
+<pre class="prettyprint source lang-json"><code>{
+    &quot;example.com&quot;: {
+        &quot;/static/js&quot;: {
+            &quot;compress&quot;: {
+                &quot;enable&quot;: true,
+                &quot;types&quot;: [
+                    &quot;application/javascript&quot;
+                ]
+            }
+        }
+    }
+}</code></pre><h2>Config Options</h2><h5>port</h5><p>Type: <code>Number</code>, Default: <code>80</code>, <strong>Required</strong></p>
+<h5>aliases</h5><p>Type: <code>Array</code>, Default: <code>[]</code></p>
+<h5>accessLog</h5><p>Type: <code>String</code>, Default: <code>null</code></p>
+<h5>errorLog</h5><p>Type: <code>String</code>, Default: <code>null</code></p>
+<h5>root</h5><p>Type:  <code>String</code>, Default:  <code>null</code></p>
+<h5>index</h5><p>Type:  <code>Array</code>, Default:  <code>null</code></p>
+<h5>fastcgi</h5><p>Type:  <code>Boolean</code>, Default:  <code>false</code></p>
+<h5>serverSignature</h5><p>Type:  <code>Boolean</code>, Default:  <code>true</code></p>
+<h5>listDirectories</h5><p>Type:  <code>Boolean</code>, Default:  <code>false</code></p>
+<h3>ssl</h3><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>ssl.enable</h5><p>Type:  <code>Boolean</code>, Default:  <code>false</code></p>
+<h5>ssl.cert</h5><p>Type:  <code>String</code>, Default:  <code>null</code></p>
+<h5>ssl.key</h5><p>Type:  <code>String</code>, Default:  <code>null</code></p>
+<h3>compress</h3><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>compress.enable</h5><p>Type:  <code>Boolean</code>, Default:  <code>true</code></p>
+<h5>compress.types</h5><p>Type:  <code>Array</code>, Default:  <code>['text/plain']</code></p>
+<h3>caching</h3><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>caching.enable</h5><p>Type:  <code>Boolean</code>, Default:  <code>false</code></p>
+<h5>caching.types</h5><p>Type:  <code>Array</code>, Default:  <code>['text/plain']</code></p>
+<h5>caching.expires</h5><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>caching.expires.years</h5><p>Type:  <code>Number</code>, Default:  <code>0</code></p>
+<h5>caching.expires.months</h5><p>Type:  <code>Number</code>, Default:  <code>0</code></p>
+<h5>caching.expires.weeks</h5><p>Type:  <code>Number</code>, Default:  <code>0</code></p>
+<h5>caching.expires.days</h5><p>Type:  <code>Number</code>, Default:  <code>0</code></p>
+<h5>caching.expires.minutes</h5><p>Type:  <code>Number</code>, Default:  <code>0</code></p>
+<h3>auth</h3><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>auth.enable</h5><p>Type:  <code>Boolean</code>, Default:  <code>false</code></p>
+<h5>auth.message</h5><p>Type:  <code>String</code>, Default:  <code>'Restricted'</code></p>
+<h5>auth.userFile</h5><p>Type:  <code>String</code>, Default:  <code>null</code></p>
+<h3>headers</h3><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>headers.set</h5><p>Type:  <code>Object</code>, Default:  <code>null</code></p>
+<h5>headers.unset</h5><p>Type:  <code>Array</code>, Default:  <code>[]</code></p>
+<h3>proxy</h3><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>proxy.enable</h5><p>Type:  <code>Boolean</code>, Default:  <code>false</code></p>
+<h5>proxy.to</h5><p>Type:  <code>String</code>, Default:  <code>null</code></p>
+<h3>redirect</h3><p>Type:  <code>Object</code>, Default:  <code>Object</code></p>
+<h5>redirect.enable</h5><p>Type:  <code>Boolean</code>, Default:  <code>false</code></p>
+<h5>redirect.to</h5><p>Type:  <code>String</code>, Default:  <code>null</code></p>
+<h5>redirect.permanent</h5><p>Type:  <code>Boolean</code>, Default:  <code>true</code></p>
+<h2>Example <code>.switchrc</code> file</h2><p>This example creates an SSL virtual host for <code>example.com</code> with a reverse proxy on port 3000, it caches and compresses static assets, and performs a 301 redirect on <code>http://</code> and <code>www</code> subdomain traffic to <code>https://example.com</code>.</p>
+<pre class="prettyprint source lang-json"><code>{
+    &quot;example.com&quot;: {
+        &quot;port&quot;: 443,
+        &quot;ssl&quot;: {
+            &quot;enable&quot;: true,
+            &quot;cert&quot;: &quot;/etc/ssl/cert.crt&quot;,
+            &quot;key&quot;: &quot;/etc/ssl/cert.key&quot;
+        },
+        &quot;aliases&quot;: [&quot;sub.example.com&quot;],
+        &quot;accessLog&quot;: &quot;/var/log/access.log&quot;,
+        &quot;errorLog&quot;: &quot;/var/log/error.log&quot;,
+        &quot;root&quot;: &quot;/var/www&quot;,
+        &quot;index&quot;: [
+            &quot;index.js&quot;
+        ],
+        &quot;serverSignature&quot;: false,
+        &quot;listDirectories&quot;: false,
+        &quot;/&quot;: {
+            &quot;proxy&quot;: {
+                &quot;enable&quot;: true,
+                &quot;to&quot;: &quot;http://localhost:3000&quot;
+            }
+        },
+        &quot;/static&quot;: {
+            &quot;compress&quot;: {
+                &quot;enable&quot;: true,
+                &quot;types&quot;: [
+                    &quot;text/plain&quot;,
+                    &quot;application/javascript&quot;,
+                    &quot;text/javascript&quot;,
+                    &quot;text/css&quot;
+                ]
+            },
+            &quot;caching&quot;: {
+                &quot;enable&quot;: true,
+                &quot;types&quot;: [
+                    &quot;js&quot;, &quot;css&quot;, &quot;html&quot;, &quot;svg&quot;
+                ],
+                &quot;expires&quot;: {
+                    &quot;years&quot;: 1
+                }
+            },
+            &quot;headers&quot;: {
+                &quot;set&quot;: {
+                    &quot;header-1&quot;: &quot;1&quot;,
+                    &quot;header-2&quot;: &quot;2&quot;,
+                    &quot;header-3&quot;: &quot;3&quot;
+                },
+                &quot;unset&quot;: [
+                    &quot;bad-header-1&quot;,
+                    &quot;bad-header-2&quot;
+                ]
+            }
+        }
+    },
+    &quot;www.example.com&quot;: {
+        &quot;port&quot;: 80,
+        &quot;aliases&quot;: [&quot;example.com&quot;],
+        &quot;redirect&quot;: {
+            &quot;enable&quot;: true,
+            &quot;to&quot;: &quot;https://example.com&quot;,
+            &quot;permanent&quot;: true
+        }
+    }
+}</code></pre><h2>Issues</h2><p>If you have any problems, post an issue to this repository's issue page.</p>
+<h2>Contributing</h2><p>To contribute, you'll need node.js.</p>
+<p>Fork and clone the repository and run the following:</p>
+<pre class="prettyprint source lang-bash"><code>npm install && npm run watch</code></pre><p>Once you've made your changes, run the build process:</p>
+<pre class="prettyprint source lang-bash"><code>npm run build</code></pre><p>Finally, if your tests pass, submit a pull request!</p>
+<h2>License</h2><p>Copyright 2016- Luke Jones (https://github.com/luke-j)</p>
+<p>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at</p>
+<p>http://www.apache.org/licenses/LICENSE-2.0</p>
+<p>Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.</p></article>
+    </section>
+
+
+
+
+
+
+
+		</div>
+	</div>
+
+	<div class="clearfix"></div>
+
+	
+		<div class="col-md-3">
+			<div id="toc" class="col-md-3 hidden-xs hidden-sm hidden-md"></div>
+		</div>
+	
+
+</div>
+</div>
+
+<div class="modal fade" id="searchResults">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Search results</h4>
+      </div>
+      <div class="modal-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div>
+
+<footer>
+
+
+<span class="jsdoc-message">
+	Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a>
+	
+		on 2016-04-14T03:30:56+00:00
+	
+	using the <a href="https://github.com/docstrap/docstrap">DocStrap template</a>.
+</span>
+</footer>
+
+<script src="scripts/docstrap.lib.js"></script>
+<script src="scripts/toc.js"></script>
+<script type="text/javascript" src="scripts/fulltext-search-ui.js"></script>
+
+<script>
+$( function () {
+	$( "[id*='$']" ).each( function () {
+		var $this = $( this );
+
+		$this.attr( "id", $this.attr( "id" ).replace( "$", "__" ) );
+	} );
+
+	$( ".tutorial-section pre, .readme-section pre" ).each( function () {
+		var $this = $( this );
+
+		var example = $this.find( "code" );
+		exampleText = example.html();
+		var lang = /{@lang (.*?)}/.exec( exampleText );
+		if ( lang && lang[1] ) {
+			exampleText = exampleText.replace( lang[0], "" );
+			example.html( exampleText );
+			lang = lang[1];
+		} else {
+			var langClassMatch = example.parent()[0].className.match(/lang\-(\S+)/);
+			lang = langClassMatch ? langClassMatch[1] : "javascript";
+		}
+
+		if ( lang ) {
+
+			$this
+			.addClass( "sunlight-highlight-" + lang )
+			.addClass( "linenums" )
+			.html( example.html() );
+
+		}
+	} );
+
+	Sunlight.highlightAll( {
+		lineNumbers : false,
+		showMenu : true,
+		enableDoclinks : true
+	} );
+
+	$.catchAnchorLinks( {
+        navbarOffset: 10
+	} );
+	$( "#toc" ).toc( {
+		anchorName  : function ( i, heading, prefix ) {
+			var id = $( heading ).attr( "id" );
+			return id && id.replace(/\~/g, '-inner-').replace(/\./g, '-static-') || ( prefix + i );
+		},
+		selectors   : "#toc-content h1,#toc-content h2,#toc-content h3,#toc-content h4",
+		showAndHide : false,
+		smoothScrolling: true
+	} );
+
+	$( "#main span[id^='toc']" ).addClass( "toc-shim" );
+	$( '.dropdown-toggle' ).dropdown();
+
+    $( "table" ).each( function () {
+      var $this = $( this );
+      $this.addClass('table');
+    } );
+
+} );
+</script>
+
+
+
+<!--Navigation and Symbol Display-->
+
+
+<!--Google Analytics-->
+
+
+<script type="text/javascript">
+	$(document).ready(function() {
+		SearcherDisplay.init();
+	});
+</script>
+
+</body>
+</html>
