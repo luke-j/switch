@@ -18,7 +18,7 @@ brew install spidermonkey
 
 **Download Switch:**
 ```bash
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh | bash
+curl -o- https://raw.githubusercontent.com/luke-j/switch/master/install.sh | bash
 ```
 
 **Create your ``.switchrc`` config file** (see the example [here]()).

@@ -62,6 +62,9 @@ download() {
         else
             mkdir "${SWITCH_SOURCE}/dist"
             # todo - curl files from repo once repo is up
+            curl -sLko "${SWITCH_SOURCE}/dist/build.js" https://raw.githubusercontent.com/luke-j/switch/master/dist/build.js
+            curl -sLko "${SWITCH_SOURCE}/dist/build.js.map" https://raw.githubusercontent.com/luke-j/switch/master/dist/build.js.map
+            curl -sLko "${SWITCH_SOURCE}/switch" https://raw.githubusercontent.com/luke-j/switch/master/switch
         fi
     else
         echo -e "=> Error: \n=> There was a problem creating the switch source directory"
