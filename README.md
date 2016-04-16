@@ -37,7 +37,7 @@ Note: currently supported <app> options are either nginx or apache
 
 Usage:
   switch help                   Show this message
-  switch to <app>               Build conf file for the <app> specified and start the <app> service, cathing any <app> errors
+  switch to <app>               Build conf file for the <app> specified and start the <app> service, catching any <app> errors
     --config <file>             Config file to used to generate conf file. Default: <current directory>/.switchrc
     --out <file>                Output file. Default: /etc/nginx/sites-enabled/switch.conf, /etc/apache2/sites-enabled/switch.conf
     --source <file>             The Switch source directory, for current directory, use a period. Default: ~/.switch
