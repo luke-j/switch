@@ -93,7 +93,7 @@ export default class To {
 				).build();
 				break;
 			default:
-				throw new Error(`Invalid "use" parameter ${this._use}`);
+				throw new Error(`Invalid "to" parameter ${this._use}`);
 		}
 
 		this._output += builder.output();

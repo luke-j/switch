@@ -93,7 +93,7 @@ export default class AbstractCompiler extends CompilerInterface {
 	 */
 	_variable(expression) {
 		if (!expression.hasOwnProperty('value')) {
-			throw new Error('Literal must have a value');
+			throw new Error('Variable must have a value');
 		}
 
 		this._line += expression.value + ' ';
