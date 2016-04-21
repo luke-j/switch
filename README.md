@@ -25,7 +25,7 @@ brew install spidermonkey
 curl -o- https://raw.githubusercontent.com/luke-j/switch/master/install.sh | bash
 ```
 
-**Create your ``.switchrc`` config file** (see the example [here]()).
+**Create your ``.switchrc`` config file** (see the example [here](#example-switchrc-file)).
 
 Usage
 ---------
