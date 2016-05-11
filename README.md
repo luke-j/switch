@@ -45,8 +45,8 @@ Usage:
   switch current                Display <app> currently being used
 
 Example:
-  switch use nginx              Generate nginx.conf and start the nginx service
-  switch use apache --print     Display the generated apache.conf, without writing to file or starting apache
+  switch to nginx              Generate nginx.conf and start the nginx service
+  switch to apache --print     Display the generated apache.conf, without writing to file or starting apache
 ```
 
 ``.switchrc`` files
