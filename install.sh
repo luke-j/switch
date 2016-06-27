@@ -60,8 +60,12 @@ download() {
             git clone https://github.com/luke-j/switch.git "${SWITCH_SOURCE}"
         else
             mkdir "${SWITCH_SOURCE}/dist"
+            mkdir "${SWITCH_SOURCE}/src"
+            mkdir "${SWITCH_SOURCE}/src/templates"
             curl -sLko "${SWITCH_SOURCE}/dist/build.js" https://raw.githubusercontent.com/luke-j/switch/master/dist/build.js
             curl -sLko "${SWITCH_SOURCE}/dist/build.js.map" https://raw.githubusercontent.com/luke-j/switch/master/dist/build.js.map
+            curl -sLko "${SWITCH_SOURCE}/src/templates/nginx.hbs" https://raw.githubusercontent.com/luke-j/switch/master/src/templates/nginx.hbs
+            curl -sLko "${SWITCH_SOURCE}/src/templates/apache.hbs" https://raw.githubusercontent.com/luke-j/switch/master/src/templates/apache.hbs
             curl -sLko "${SWITCH_SOURCE}/switch" https://raw.githubusercontent.com/luke-j/switch/master/switch
         fi
     else
